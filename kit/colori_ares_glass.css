@@ -1,0 +1,66 @@
+/* copia dal kit ARES Glass del 2026-10-25 (Expo Hub, pannello dei commerciali): NON modificare, si ricopia dal kit */
+/* KIT ARES GLASS - i colori del cruscotto ARES (variabili --c-...), GENERATI da base/genera_colori.py
+   leggendo riferimento/python/cruscotto_tema.py (PALETTE, "LASIT Glass chiaro") il 2026-10-25.
+   NON SCRIVERE A MANO: si cambia cruscotto_tema.PALETTE in ARES, poi prove/riferimento.py --copia e
+   base/genera_colori.py. Differenza da Media Hub: NESSUN "blu unico". ARES ha due blu, il blu LASIT #103A72
+   (primario, voce aperta, titoli forti) e l'accento #0077B6 (occhielli, icone, link), piu' il ciano #00A3E0
+   (la barretta della voce aperta). */
+:root {
+  --c-sf_alto: #B9E6FF;
+  --c-sf_basso: #DCF1FF;
+  --c-sf_mezzo: #FFFFFF;
+  --c-bagliore: #FFFFFF;
+  --c-barra: #103A72;
+  --c-barra_testo: #FFFFFF;
+  --c-testo: #28334F;
+  --c-tenue: #566783;
+  --c-tenue_2: #5E6F88;
+  --c-card: #FFFFFFD6;
+  --c-card_forte: #FFFFFFED;
+  --c-card_tenue: #EAF2FBC7;
+  --c-campo: #EAF2FBC7;
+  --c-opaco: #F4F9FE;
+  --c-campo_testo: #28334F;
+  --c-box: #F4F9FE;
+  --c-box_testo: #28334F;
+  --c-bordo: #4D78A945;
+  --c-bordo_forte: #2A6AA65E;
+  --c-bordo_opaco: #D2DEEC;
+  --c-blu_lasit: #103A72;
+  --c-accento: #0077B6;
+  --c-ciano: #00A3E0;
+  --c-btn: #E6EEF8;
+  --c-btn_su: #D7E3F1;
+  --c-btn_testo: #103A72;
+  --c-go: #103A72;
+  --c-go_su: #1B4C8C;
+  --c-btn_ko: #9F1F31;
+  --c-pillola: #E6EEF8;
+  --c-vetro_scheda_bordo: #5F87B552;
+  --c-vetro_barra_bordo: #5F87B53B;
+  --c-vetro_luce: #FFFFFFE6;
+  --c-scorri_traccia: #E3EBF5;
+  --c-scorri: #6A84A6;
+  --c-scorri_su: #36577F;
+  --c-ok: #15703F;
+  --c-fondo_ok: #E6F4EB;
+  --c-quota_piena: #2BC36B;
+  --c-cerchio_numero: #C9E2F7;
+  --c-warn: #9C5E00;
+  --c-fondo_warn: #FFF7E8;
+  --c-ko: #B42335;
+  --c-fondo_ko: #FAE9EB;
+  --c-mu: #5D6F87;
+  --c-fondo_mu: #EEF3F8;
+  --c-fondo_acc: #F2F8FE;
+  --c-spento_ok: #A8D5BE;
+  --c-spento_ko: #EFB3BC;
+  --c-spento_warn: #EDD5A6;
+  --c-traccia: #E1E8F1;
+  --c-riga_nuova: #DCEBFA;
+  --c-testo_traccia: #4A5D78;
+  --sfondo: linear-gradient(112deg, #B9E6FF 0%, #EDF8FF 30%, #FFFFFF 53%, #EDF8FF 76%, #B9E6FF 100%);
+  --vetro: linear-gradient(180deg, #FFFFFFD4 0%, #F5FAFFC7 24%, #EEF7FFBF 78%, #E3F1FFC4 100%);
+  --vetro-barra: linear-gradient(180deg, #FFFFFF9C 0%, #FFFFFF87 35%, #EEF7FF78 100%);
+  --ombra: 0 7px 20px rgba(74, 112, 159, 0.12);
+}

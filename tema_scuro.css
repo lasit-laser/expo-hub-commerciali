@@ -1,0 +1,102 @@
+/* Expo Hub · TEMA SCURO (utente 2026-11-25): la stessa interfaccia del tema chiaro, coi colori della notte LASIT.
+   Si accende con la classe "scuro" su <html> (interruttore sole/luna nella barra in alto). NON tocca il kit: qui si
+   ridefiniscono le sue variabili --c-... e si correggono i pochi fondi chiari che il kit e i nostri file scrivono a
+   mano (campi, menu, dialoghi, commenti...). UGUALE nel pannello del marketing (pannello/expohub/web/) e nella pagina
+   dei commerciali (commerciali/): si cambia in uno e si ricopia nell'altro.
+   Contrasti (testo su fondo effettivo): testo #E6EDF7 su #13284A ~ 13:1, tenue #9DB0CB ~ 6,6:1, accento #5CB8F2 ~ 6:1,
+   bianco su blu LASIT #2D63B3 ~ 5,6:1. */
+html.scuro {
+  color-scheme: dark;
+  --c-sf_alto: #081528;
+  --c-sf_basso: #0C1D38;
+  --c-sf_mezzo: #11274A;
+  --c-bagliore: #1A3A66;
+  --c-barra: #0B1F3D;
+  --c-barra_testo: #E6EDF7;
+  --c-testo: #E6EDF7;
+  --c-tenue: #9DB0CB;
+  --c-tenue_2: #93A6C2;
+  --c-card: #142A4DD6;
+  --c-card_forte: #18305AEB;
+  --c-card_tenue: #132746C7;
+  --c-campo: #0E2142D9;
+  --c-opaco: #13284A;
+  --c-campo_testo: #E6EDF7;
+  --c-box: #13284A;
+  --c-box_testo: #E6EDF7;
+  --c-bordo: #8DB4E83D;
+  --c-bordo_forte: #8DB4E866;
+  --c-bordo_opaco: #2B4670;
+  --c-blu_lasit: #2D63B3;
+  --c-accento: #5CB8F2;
+  --c-ciano: #22C3FF;
+  --c-btn: #1C3459;
+  --c-btn_su: #24416E;
+  --c-btn_testo: #DCE7F5;
+  --c-go: #2D63B3;
+  --c-go_su: #3A74C8;
+  --c-btn_ko: #C2384B;
+  --c-pillola: #1C3459;
+  --c-vetro_scheda_bordo: #8DB4E83D;
+  --c-vetro_barra_bordo: #8DB4E830;
+  --c-vetro_luce: #FFFFFF14;
+  --c-scorri_traccia: #13284A;
+  --c-scorri: #4E6A90;
+  --c-scorri_su: #7090BA;
+  --c-ok: #5BD199;
+  --c-fondo_ok: #123A2C;
+  --c-quota_piena: #2BC36B;
+  --c-cerchio_numero: #1F3D66;
+  --c-warn: #F2BC5B;
+  --c-fondo_warn: #3A2C12;
+  --c-ko: #FF7A88;
+  --c-fondo_ko: #4A1C26;
+  --c-mu: #A5B6CE;
+  --c-fondo_mu: #1A2F50;
+  --c-fondo_acc: #15335C;
+  --c-spento_ok: #2F5E48;
+  --c-spento_ko: #6B3440;
+  --c-spento_warn: #6A5530;
+  --c-traccia: #1F3557;
+  --c-riga_nuova: #1C3A63;
+  --c-testo_traccia: #B5C4D9;
+  --sfondo: linear-gradient(112deg, #081528 0%, #0D2141 30%, #13294D 53%, #0D2141 76%, #081528 100%);
+  --vetro: linear-gradient(180deg, #1B355CDB 0%, #172F54D4 24%, #142A4CCF 78%, #112546D4 100%);
+  --vetro-barra: linear-gradient(180deg, #1B355CC2 0%, #172F54B3 35%, #112546AD 100%);
+  --ombra: 0 7px 22px rgba(0, 0, 0, 0.38);
+}
+
+/* --- il kit usa il blu LASIT anche come colore del TESTO (pulsanti secondari, numeri, voci scelte): sul fondo scuro
+   non si leggerebbe, qui diventa il chiaro dei pulsanti (pulsanti pieni, principali e rossi, restano col bianco) --- */
+html.scuro .pul:not(.principale):not(.critico):not(.attivo), html.scuro .pul:not(.principale):not(.critico):not(.attivo):hover,
+html.scuro .tondo-n b, html.scuro .voce-rail.scelta, html.scuro .rail .b-rail, html.scuro .passo-rd .badge { color: var(--c-btn_testo); }
+
+/* --- i fondi e i bordi chiari scritti a mano nel kit (ares_glass.css) --- */
+html.scuro .scheda, html.scuro .f-pannello { border-color: #8DB4E83D; box-shadow: var(--ombra), inset 0 1px 0 #FFFFFF14; }
+html.scuro .scheda.inattiva { border-color: #8DB4E855; }
+html.scuro .evidenza { background: #24416E; }
+html.scuro .pul.principale.occupato:disabled { background: #23406A; color: #C9D6E8; }
+html.scuro .pul.principale.occupato:disabled i { color: #C9D6E8; }
+html.scuro .levetta { background: #3A5378; }
+html.scuro .campo { background: #0E2142; color: var(--c-campo_testo); }
+html.scuro .campo input, html.scuro .campo textarea, html.scuro input, html.scuro textarea, html.scuro select { color: var(--c-campo_testo); }
+html.scuro ::placeholder { color: #7F93B0; }
+html.scuro .notifica, html.scuro .messaggio, html.scuro #menu { background: #152B4F; }
+html.scuro .messaggio.questa { background: var(--fondo-l, #152B4F); }
+html.scuro #suggerimento { background: var(--vetro), #152B4F; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+html.scuro .esclusi .e2 div { background: #152B4FB0; }
+html.scuro #dialogo { background: linear-gradient(180deg, #1B355C 0%, #142A4C 100%); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); }
+html.scuro #velo, html.scuro #velo-fogli { background: rgba(2, 8, 20, 0.55); }
+html.scuro #menu { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); }
+
+/* --- i nostri file (pannello.css e stile.css) --- */
+html.scuro .eh-scrivi .campo, html.scuro .eh-campo .campo, html.scuro .eh-commento .campo, html.scuro .eh-campo .tendina { background: #0E2142; }
+html.scuro .eh-evento.commento .cosa { background: #152B4F; }
+html.scuro .eh-cal .g.fuori { background: #0B1B3580; }
+html.scuro .eh-marchio b { color: #E6EDF7; }
+html.scuro .eh-voce.attiva { border-color: #5CB8F288; }
+
+/* --- l'interruttore sole/luna (chiaro/scuro) nella barra in alto: il selettore del kit, con le sole icone --- */
+.eh-tema.interruttore { width: 76px; flex: none; }
+.eh-tema.interruttore button { padding: 0; font-size: 14px; }
+.eh-tema.interruttore button svg { width: 15px; height: 15px; }

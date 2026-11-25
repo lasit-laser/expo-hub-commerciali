@@ -1,0 +1,15 @@
+{
+  "name": "Expo Hub · LASIT",
+  "short_name": "Expo Hub",
+  "description": "Richieste di materiale per le fiere al marketing LASIT",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#DCF1FF",
+  "theme_color": "#DCF1FF",
+  "icons": [
+    { "src": "icona.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icona_192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icona_512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

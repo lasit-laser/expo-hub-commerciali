@@ -1,0 +1,139 @@
+/* Expo Hub · pannello dei commerciali: SOLO l'impaginazione di Expo Hub e le parti che il kit ARES Glass non ha,
+   disegnate con i suoi valori (colori --c-..., raggi, altezze, caratteri). Nomi di classe con il prefisso "eh-": mai le
+   classi del kit per i propri contenitori (SPECIFICA § 12, regola 12). A scala 1 su 1360 x 1000, ingrandito con zoom. */
+
+/* icone disegnate (SVG): alte un em come quelle del kit */
+i[data-ic].svg { font-family: inherit; }
+i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
+
+/* ---------------------------------------------------------------- struttura */
+/* barra in alto UGUALE a quella del pannello del marketing (utente 2026-11-25): alta 62, logo e "EXPO HUB" con le
+   stesse misure e la stessa distanza dal bordo */
+.eh-barra { position: absolute; left: 18px; top: 10px; right: 18px; z-index: 3; height: 62px; padding: 0 8px; }
+.eh-pagina { left: 4px; top: 76px; right: 4px; bottom: 0; }
+.eh-contenuto { max-width: 1240px; margin: 0 auto; padding: 8px 8px 24px; }
+.eh-marchio { display: flex; align-items: center; gap: 12px; flex: none; margin: 0 18px 0 8px; }
+.eh-marchio .segno { width: 32px; height: 32px; display: block; }
+.eh-marchio b { font-weight: 600; font-size: 12.5px; letter-spacing: 1.4px; color: var(--c-blu_lasit); }
+/* l'intestazione della pagina come nel pannello del marketing: titolo 40/50 e, sulla sua riga, i filtri piccoli
+   APPOGGIATI sulla linea di base del titolo (il fondo delle pillole dove poggiano le lettere: MISURATO, 8,5 px sopra il
+   fondo della riga), staccati di 32; sotto la riga vuota della frase, come nel pannello */
+.intestazione h1 { font-size: 40px; line-height: 50px; }
+.eh-titolo-riga { display: flex; align-items: flex-end; }
+.eh-titolo-riga h1 { flex: none; }
+.eh-filtri { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: 32px; margin-bottom: 8.5px; }
+.eh-lingua { gap: 8px; }
+
+/* ---------------------------------------------------------------- elenco delle fiere */
+.eh-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; align-content: start; }
+.eh-carta { cursor: pointer; }
+.eh-carta .testa h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.eh-carta .corpo { display: flex; flex-direction: column; gap: 8px; }
+.eh-riga { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--c-testo); min-width: 0; }
+.eh-riga i { color: var(--c-accento); font-size: 13px; flex: none; }
+.eh-riga span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eh-riga.tenue { color: var(--c-tenue); }
+.eh-pillole { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.eh-pillole .et { font-size: 10.5px; color: var(--c-tenue); margin-right: 2px; }
+.eh-vuoto { max-width: 620px; }
+.eh-nessuna { padding: 28px 8px; color: var(--c-tenue); font-size: 12px; }
+.eh-vuoto .corpo { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; font-size: 12px; color: var(--c-tenue); }
+
+/* ---------------------------------------------------------------- richiesta: due colonne */
+.eh-indietro { margin: 0 0 10px 6px; }
+.eh-colonne { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; align-items: start; }
+.eh-colonne > .colonna { min-width: 0; }
+
+/* campi con l'etichetta in alto (come il campo a tendina: etichetta 9,5 tenue) */
+.eh-campi { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 12px; }
+.eh-campo { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.eh-campo .et { font-size: 9.5px; color: var(--c-tenue); line-height: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eh-campo .et b { font-weight: 600; color: var(--c-accento); margin-left: 4px; }
+.s1 { grid-column: span 1; } .s2 { grid-column: span 2; } .s3 { grid-column: span 3; } .s4 { grid-column: span 4; } .s6 { grid-column: span 6; }
+/* campi di testo e tendine dei moduli: alti 40, raggio 12, bianchi col bordo forte, MAI squadrati (REGOLE 2) */
+.eh-campo .campo, .eh-commento .campo { width: 100%; height: 40px; padding: 0 14px; border-radius: 12px; background: #FFFFFF;
+  border: 1px solid var(--c-bordo_forte); }
+.eh-campo .campo input { font-size: 13px; }
+.eh-campo .tendina { width: 100%; height: 40px; border-radius: 12px; background: #FFFFFF; border-color: var(--c-bordo_forte);
+  padding: 0 36px 0 14px; justify-content: center; }
+.eh-campo .tendina .va { margin-top: 0; font-weight: 400; font-size: 13px; line-height: 18px; }
+.eh-campo .tendina > i { right: 14px; margin-top: -0.5em; font-size: 11px; }
+.eh-campo .campo:focus-within, .eh-commento .campo:focus-within, .eh-campo .tendina.aperta { border-color: var(--c-accento); }
+.campo.eh-area { height: auto; align-items: stretch; padding: 9px 14px; }
+.campo.eh-area textarea { flex: 1; min-width: 0; min-height: 58px; border: 0; outline: 0; resize: vertical; background: transparent;
+  font: 400 13px/1.45 "Segoe UI", system-ui, sans-serif; color: var(--c-campo_testo); user-select: text; -webkit-user-select: text; }
+.campo.eh-area textarea::placeholder { color: var(--c-tenue); }
+.eh-sotto-titolo { grid-column: span 6; margin-top: 6px; font-weight: 600; font-size: 8.5px; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--c-tenue); }
+
+/* documenti: la zona in cui trascinare e l'elenco dei file */
+.eh-rilascio { border: 1.5px dashed #4D78A980; border-radius: 16px; background: var(--c-card_tenue); padding: 18px; display: flex;
+  align-items: center; justify-content: center; gap: 14px; font-size: 12px; color: var(--c-tenue); transition: border-color var(--t-sopra) ease; }
+.eh-rilascio.sopra { border-color: var(--c-accento); background: var(--c-fondo_acc); }
+.eh-rilascio > i { font-size: 22px; color: var(--c-accento); }
+/* righe dei file: alte 40, raggio 12; azione "Apri ›" come testo accento, mai una pillola nella riga (REGOLE 2) */
+.eh-file { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.eh-file-riga { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto; align-items: center; column-gap: 12px; min-height: 40px;
+  padding: 0 12px 0 14px; border-radius: 12px; background: var(--c-card_forte); border: 1px solid var(--c-bordo); font-size: 11.5px; }
+.eh-ic-file { display: grid; place-items: center; width: 16px; height: 16px; color: var(--c-accento); font-size: 15px; }
+.eh-file-riga .nome { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--c-testo); font-weight: 600; }
+.eh-file-riga .peso { color: var(--c-tenue); font-variant-numeric: tabular-nums; font-size: 10.5px; white-space: nowrap; }
+.eh-apri { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 2px 0 6px; color: var(--c-accento);
+  font-weight: 600; font-size: 11.5px; white-space: nowrap; text-decoration: none; }
+.eh-apri i { font-size: 11px; }
+.eh-apri:hover > span { text-decoration: underline; text-underline-offset: 3px; }
+.eh-avanzamento { width: 120px; height: 6px; border-radius: 3px; background: var(--c-traccia); overflow: hidden; }
+.eh-avanzamento > div { height: 100%; background: var(--c-accento); transform-origin: left; transition: transform 240ms var(--e-pen); }
+
+/* materiali: un GRUPPO per materiale = il riquadro del modulo + il riquadro "File dal marketing" (REGOLE 3) */
+.eh-mat-gruppo { display: flex; flex-direction: column; gap: 10px; }
+.eh-mat-gruppo + .eh-mat-gruppo { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--c-bordo); }
+.eh-mat { border-radius: 16px; background: var(--c-card_tenue); border: 1px solid var(--c-bordo); padding: 12px 14px 14px; }
+.eh-mat-testa, .eh-consegne-testa { display: flex; align-items: center; gap: 10px; min-height: 32px; margin-bottom: 10px; }
+.eh-mat-testa .tessera.piccola, .eh-consegne-testa .tessera.piccola { font-size: 14px; }
+.eh-mat-testa b, .eh-consegne-testa b { font-weight: 600; font-size: 12px; color: var(--c-testo); }
+.eh-mat-testa .pul { margin-left: auto; }
+.eh-mat .quieto { font-size: 11px; }
+.eh-azioni { display: flex; gap: 10px; align-items: center; margin-top: 12px; }
+.eh-consegne { border-radius: 16px; background: var(--c-card_forte); border: 1px solid #0077B640; padding: 12px 14px 14px; }
+.eh-consegne:empty { display: none; }
+
+/* versioni consegnate: raggio 12; dentro, i file sono righe semplici col filo (niente riquadri nei riquadri) */
+.eh-versione { border-radius: 12px; background: var(--c-fondo_acc); border: 1px solid var(--c-bordo); padding: 10px 12px; }
+.eh-versione + .eh-versione { margin-top: 8px; }
+.eh-versione-testa { display: flex; align-items: center; gap: 10px; min-height: 22px; font-size: 10.5px; margin-bottom: 4px; }
+.eh-versione-testa b { font-weight: 600; font-size: 12px; color: var(--c-testo); }
+.eh-versione-testa .sigla { margin-left: auto; }
+.eh-versione-nota { font-size: 11.5px; line-height: 16px; color: var(--c-testo); white-space: pre-wrap; margin: 2px 0 6px; user-select: text; -webkit-user-select: text; }
+.eh-versione-nota b { font-weight: 600; }
+.eh-versione .eh-file { margin-top: 0; gap: 0; }
+.eh-versione .eh-file-riga { background: transparent; border: 0; border-top: 1px solid var(--c-bordo); border-radius: 0; padding: 0; min-height: 38px; }
+.eh-versione .eh-apri { padding-right: 0; }
+/* un solo bordo destro per pillole e pulsanti di un materiale (REGOLE 5): le intestazioni rientrano quanto il riquadro
+   della versione (padding 12 + bordo 1) */
+.eh-mat-testa, .eh-consegne-testa { padding-right: 13px; }
+.eh-rilascio { margin-top: 0; }
+.eh-versione .eh-azioni { justify-content: flex-end; margin-top: 10px; }
+
+/* lingue delle grafiche: pillole che si accendono */
+.eh-lingue { display: flex; flex-wrap: wrap; gap: 8px; }
+.eh-lingue .sigla { cursor: pointer; }
+
+/* colonna di destra */
+.eh-stato .corpo { display: flex; flex-direction: column; gap: 12px; }
+.eh-stato .pul.principale { width: 100%; height: 40px; border-radius: 20px; font-size: 13px; }
+.eh-salvato { font-size: 11px; color: var(--c-tenue); text-align: center; }
+.eh-salvato.da-salvare { color: var(--c-warn); font-weight: 600; }
+.eh-eventi { display: flex; flex-direction: column; gap: 12px; max-height: 420px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
+.eh-evento { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; align-items: start; }
+.eh-evento .avatar { background: var(--c-fondo_acc); color: var(--c-accento); border: 1px solid #0077B630; }
+.eh-evento.marketing .avatar { background: var(--c-blu_lasit); color: #FFFFFF; border-color: transparent; }
+.eh-evento .chi { font-size: 10.5px; line-height: 14px; color: var(--c-tenue); padding-top: 1px; }
+.eh-evento .chi b { font-weight: 600; color: var(--c-testo); margin-right: 6px; }
+.eh-evento .cosa { font-size: 11.5px; line-height: 16px; color: var(--c-testo); margin-top: 2px; white-space: pre-wrap; word-break: break-word;
+  user-select: text; -webkit-user-select: text; }
+.eh-evento.commento .cosa { background: #FFFFFF; border: 1px solid var(--c-bordo); border-radius: 12px; padding: 8px 10px; margin-top: 4px; }
+.eh-commento { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--c-bordo); display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+
+/* accesso senza link */
+.eh-accesso { max-width: 560px; margin: 80px auto 0; }

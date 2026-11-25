@@ -1,0 +1,832 @@
+/* copia dal kit ARES Glass del 2026-10-25 (Expo Hub, pannello dei commerciali): NON modificare, si ricopia dal kit */
+/* KIT ARES GLASS - base comune (dal cruscotto ARES in HTML/CSS approvato il 25/10/2026, riferimento/web/).
+
+   Il cruscotto carica TRE fogli: colori_lasit_glass.css e lasit_glass.css (copie del kit di Media Hub) e
+   cruscotto.css, che RIDEFINISCE misure e colori con quelli della finestra Tk di ARES. Qui c'e' il RISULTATO di
+   quella cascata, in un foglio solo: ogni regola ha il valore che il cruscotto mostra davvero (provato confrontando
+   gli stili calcolati, prove/confronto.py). Gli id della struttura di ARES (#rail, #barra, #briciole...) sono
+   diventati classi (.rail, .barra-alta, .briciole...); le POSIZIONI della struttura (dove sta la barra laterale, da
+   dove parte il contenuto) non ci sono: sono l'impaginazione di ARES, ogni programma ha la sua.
+   I colori --c-... e i gettoni --sfondo, --vetro, --vetro-barra, --ombra arrivano da colori_ares_glass.css (generato
+   da cruscotto_tema.py). Le misure sono a "scala 1": tutta la pagina si ingrandisce con CSS zoom (ares_glass.js).
+   NON cambiare un valore qui senza cambiarlo anche nel cruscotto, in SPECIFICA.md e in prove/verifica_statica.py. */
+
+/* ================================================================ 1. gettoni: curve e tempi */
+/* le curve di cruscotto_animazioni.CURVE (le stesse di Media Hub): ogni curva parte e arriva morbida */
+:root {
+  --e-out: cubic-bezier(0.25, 0.1, 0.15, 1);
+  --e-soft: cubic-bezier(0.35, 0.05, 0.2, 1);
+  --e-pen: cubic-bezier(0.45, 0, 0.2, 1);
+  --t-dissolvenza: 180ms;
+  --t-evidenza: 240ms;
+  --t-interruttore: 130ms;
+  --t-tendina: 180ms;          /* ARES: 180 (cruscotto_animazioni.TENDINA); Media Hub 140 */
+  --t-suggerimento: 140ms;     /* il suggerimento resta quello del kit */
+  --t-dialogo: 160ms;
+  --t-sopra: 110ms;
+  --ic: "Segoe Fluent Icons", "Segoe MDL2 Assets";
+}
+
+/* ================================================================ 2. base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }     /* anche dove il CSS da' un display (velo, menu) */
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--sfondo);
+  font-family: "Segoe UI", sans-serif; color: var(--c-testo); user-select: none; -webkit-user-select: none;
+  display: grid; place-items: center; cursor: default; font-size: 12px;
+}
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+/* mai il contorno nero del browser attorno al pulsante che ha il fuoco */
+button:focus, button:focus-visible { outline: none; }
+i[data-ic], .ic { font-family: var(--ic); font-style: normal; line-height: 1; display: inline-block; }
+/* il riquadro di un'icona alto esattamente un em (la riga lo allungava e l'icona, disegnata in cima, stava 1-2 px
+   sopra il centro); lo spostamento fine di ogni glifo lo calcola centraIcone (ares_glass.js) sul suo disegno vero */
+i[data-ic] { height: 1em; line-height: 1em; overflow: visible; }
+/* il palco: tutta l'interfaccia a scala 1 (ARES: 1360 x 1000), ingrandita con style.zoom e allungata fino ai bordi
+   della finestra dal JavaScript (adatta) */
+#palco { position: relative; flex: none; width: 1360px; height: 1000px; }
+body:not(.pronto) #palco { visibility: hidden; }
+
+/* ================================================================ 3. schede di vetro e intestazioni dei pannelli */
+/* il vetro del riferimento Aurora: sfumatura verticale, bordo #5F87B552, riga di luce in alto, raggio 24 */
+.scheda { position: relative; border-radius: 24px; background: var(--vetro); border: 1px solid #5F87B552;
+  box-shadow: var(--ombra), inset 0 1px 0 #FFFFFFE6; overflow: hidden; }
+.scheda:has(> .testa) { padding-top: 56px; }
+.scheda.piccola { border-radius: 20px; }
+/* l'intestazione di un pannello (_cornice + _intestazione del Tk): alta 56, margine 16; tessera 28 (raggio 10, fondo
+   azzurrino, bordo accento al 19%, icona 12), titolo 13,5 semigrassetto scuro a 12 dalla tessera; il filo sotto */
+.testa { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center;
+  height: 56px; padding: 0 16px; border-bottom: 1px solid var(--c-bordo); }
+.testa .numero { width: 28px; height: 28px; border-radius: 10px; display: grid; place-items: center; flex: none;
+  background: var(--c-fondo_acc); border: 1px solid #0077B630; color: var(--c-accento); font-size: 12px; font-weight: 400; }
+.testa h2 { margin-left: 12px; font-weight: 600; font-size: 13.5px; color: var(--c-testo); }
+.testa.cliccabile { cursor: pointer; }
+.testa .chip-testa { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; height: 22px; margin-left: 12px;
+  min-width: 0; overflow: hidden; flex: 0 1 auto; }
+.testa .chip-testa .sigla { flex: none; }
+/* "a-destra", MAI "destra": "destra" e' lo stato dell'interruttore (voce di destra) */
+.testa .a-destra { margin-left: auto; display: flex; align-items: center; gap: 10px; padding-left: 12px; flex: none;
+  font-size: 11px; color: var(--c-tenue); white-space: nowrap; }
+.testa .freccia { width: 14px; flex: none; text-align: center; color: var(--c-tenue); font-size: 12px; }
+.testa .numero .ic-radar { width: 15px; height: 15px; }
+.numero.l-ok, .tessera.l-ok { background: var(--c-fondo_ok); color: var(--c-ok); border-color: #15703F30; }
+.numero.l-warn, .tessera.l-warn { background: var(--c-fondo_warn); color: var(--c-warn); border-color: #9C5E0030; }
+.numero.l-ko, .tessera.l-ko { background: var(--c-fondo_ko); color: var(--c-ko); border-color: #B4233530; }
+.numero.l-acc, .tessera.l-acc { background: var(--c-fondo_acc); color: var(--c-accento); border-color: #0077B630; }
+.corpo { padding: 16px; }
+.corpo.stretto { padding: 14px 16px; }
+/* pannello richiudibile: chiuso resta la sola intestazione alta 60 */
+.scheda.chiusa { height: 60px; }
+.scheda.chiusa .corpo { display: none; }
+.scheda.chiusa .testa { border-bottom-color: transparent; height: 60px; }
+.scheda.bordo-ko { border-color: #B4233599; }
+.scheda.bordo-warn { border-color: #9C5E0099; }
+/* pannelli in colonna (12 fra l'uno e l'altro) e affiancati */
+.colonna { display: flex; flex-direction: column; gap: 12px; padding-bottom: 4px; }
+.colonna > * { flex: none; }
+.riga-schede { display: flex; gap: 12px; align-items: stretch; }
+.riga-schede > .scheda { flex: 1 1 0; min-width: 0; }
+.riga-schede > .scheda.senza-testa { border-radius: 20px; }
+/* il contenitore pieno (non di vetro) delle Risposte: #FFFFFFD6 col bordo */
+.scheda.contenitore { background: var(--c-card); border-color: var(--c-bordo); }
+.scheda.striscia { border-radius: 20px; }
+/* un pannello INATTIVO (finche' mancano i dati per usarlo): fondo azzurrino piatto, bordo tratteggiato, testi tenui;
+   niente opacita' (i testi sotto un'opacita' < 1 diventano grigi) */
+.scheda.inattiva { background: var(--c-card_tenue); border-style: dashed; border-color: #4D78A980; box-shadow: none; }
+.scheda.inattiva .testa h2, .scheda.inattiva .el-testo, .scheda.inattiva .conferma-rd .eti,
+.scheda.inattiva .conferma-rd .num { color: var(--c-tenue); }
+.scheda.inattiva .testa .numero { background: transparent; color: var(--c-tenue); border-color: #56678340; }
+
+/* apertura: le schede salgono di 14 px comparendo (ritardo 80 + 80*i ms dal JS, 700 ms ciascuna), poi il riflesso
+   passa UNA volta. Sempre "backwards", mai "both" (testi sgranati) */
+body.apertura .scheda { animation: sale 700ms var(--e-out) backwards; }
+body.in-attesa .scheda { animation-play-state: paused; }
+@keyframes sale { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+/* il riflesso: una banda bianca inclinata che attraversa la scheda in 1800 ms. Si anima SOLO la sua posizione (con
+   l'opacita' animata la banda andava su uno strato a parte e i testi delle schede diventavano grigi per 1,8 s) */
+.scheda::after { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: inherit;
+  background: linear-gradient(108deg, transparent 0%, transparent 40%, #FFFFFF7A 50%, transparent 60%, transparent 100%);
+  background-size: 260% 100%; background-repeat: no-repeat; }
+body.riflesso .scheda::after { opacity: 1; animation: riflesso-pagina 1800ms ease-in-out backwards; }
+.pagina.riflesso .scheda::after { opacity: 1; animation: riflesso-pagina 1800ms ease-in-out backwards; }
+@keyframes riflesso-pagina { 0% { background-position: 140% 0; } 100% { background-position: -60% 0; } }
+
+/* ================================================================ 4. intestazione della pagina (senza pannello) */
+/* occhiello 9,5 spaziato in azzurro, titolo 25, frase 12,5; i numeri in pillole azzurre alte 34 (numero 15 in blu
+   LASIT) con sotto la descrizione 10 (Antonio, 25/10/2026: "metti i numeri dentro delle pillole azzurre"). Sotto, 16
+   d'aria prima delle schede (Antonio, 27/10/2026: "distanzia sempre un po' le aree sottostanti dal sottotitolo";
+   prima 4) */
+.intestazione { display: flex; align-items: flex-start; gap: 0; padding: 0 0 16px 6px; }
+.intestazione .titoli { min-width: 0; }
+.intestazione .occhiello { font-weight: 600; font-size: 9.5px; letter-spacing: 1.4px; color: var(--c-accento);
+  text-transform: uppercase; line-height: 13px; margin-bottom: 5px; }
+.intestazione h1 { font-weight: 600; font-size: 25px; line-height: 34px; color: var(--c-testo); white-space: nowrap; }
+.intestazione .frase { font-size: 12.5px; color: var(--c-tenue); margin-top: 6px; line-height: 17px; }
+.intestazione .spia-pagina { margin-top: 6px; display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 11px; }
+.tondi { display: flex; align-items: flex-start; gap: 14px; margin: 16px 0 0 26px; }
+.tondo-n { min-width: 64px; display: flex; flex-direction: column; align-items: center; gap: 0; }
+.tondo-n b { min-width: 64px; height: 34px; padding: 0 16px 0.128em; border-radius: 17px; display: grid; place-items: center;
+  background: var(--c-cerchio_numero); color: var(--c-blu_lasit); font-weight: 600; font-size: 15px; line-height: 1;
+  font-variant-numeric: tabular-nums; }
+.tondo-n span { font-size: 10px; color: var(--c-tenue); white-space: nowrap; margin-top: 4px; }
+
+/* ================================================================ 5. barra laterale (il componente; DOVE sta e' del programma) */
+/* stretta 72, larga 236, raggio 26, il vetro della barra (piu' trasparente delle schede), bordo #5F87B53B */
+.rail { width: 72px; border-radius: 26px; background: var(--vetro-barra); border-color: #5F87B53B; }
+body.rail-larga .rail { width: 236px; }
+/* il simbolo (44) a meta' fra il bordo alto e la prima voce; larga, simbolo + scritta (alta 22) centrati */
+.rail-marchio { position: absolute; left: 0; right: 0; top: 18px; height: 44px; display: flex; align-items: center;
+  justify-content: center; gap: 12px; }
+.rail-simbolo { width: 44px; height: 44px; flex: none; }
+.rail-scritta { height: 22px; display: none; }
+body.rail-larga .rail-scritta { display: block; }
+/* le voci da 90 (18 + 44 + 28): 48 x 48 (stretta), larghe quanto la barra - 24 e alte 46 (larga); 8 fra l'una e l'altra */
+.rail-voci { position: absolute; left: 12px; right: 12px; top: 90px; }
+.rail-elenco { position: relative; z-index: 2; }
+/* la voce scelta: il riquadro bianco (raggio 16, bordo, ombra) che SCORRE da una voce all'altra (evidenza) e la
+   barretta ciano 3 x 18 al bordo della barra */
+.evidenza { position: absolute; left: 0; top: 0; z-index: 1; border-radius: 16px; background: #FFFFFF;
+  border: 1px solid var(--c-bordo); box-shadow: var(--ombra); pointer-events: none; opacity: 0; overflow: visible;
+  transition: transform var(--t-evidenza) var(--e-pen), opacity var(--t-evidenza) ease; }
+.rail .evidenza { width: 48px; height: 48px; }
+body.rail-larga .rail .evidenza { width: 100%; height: 46px; }
+.rail .evidenza::before { content: ""; position: absolute; left: -10px; top: 14px; width: 3px; height: 18px; border-radius: 2px;
+  background: var(--c-ciano); }
+body.rail-larga .rail .evidenza::before { left: -10px; top: 13px; }
+.voce-rail { position: relative; display: flex; align-items: center; width: 48px; height: 48px; margin-bottom: 8px;
+  border-radius: 16px; color: var(--c-tenue); padding: 0; text-align: left;
+  transition: background var(--t-sopra) ease, color var(--t-sopra) ease; }
+body.rail-larga .voce-rail { width: 100%; height: 46px; }
+.voce-rail.scelta, .voce-rail.scelta:hover { background: transparent; color: var(--c-blu_lasit); }
+.voce-rail .ic-voce { width: 48px; flex: none; display: grid; place-items: center; font-size: 15px; }
+.voce-rail .ic-voce .ic-radar { width: 19px; height: 19px; }
+body.rail-larga .voce-rail .ic-voce { width: 48px; font-size: 14px; }
+body.rail-larga .voce-rail .ic-voce .ic-radar { width: 17px; height: 17px; }
+.voce-rail .et { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; margin-left: -2px; }
+.voce-rail.scelta .et { font-weight: 600; }
+body.rail-larga .voce-rail .et { display: block; }
+.rail-sep { height: 1px; margin: 2px 4px 13px; background: var(--c-bordo_opaco); }
+/* Allarga / Riduci in fondo: 48 x 40 (stretta) o largo quanto le voci (larga), raggio 14, bianco col bordo forte */
+.rail .b-rail { position: absolute; left: 12px; bottom: 14px; width: 48px; height: 40px; padding: 0; gap: 0;
+  border-radius: 14px; background: var(--c-card_forte); border: 1px solid var(--c-bordo_forte); color: var(--c-blu_lasit);
+  font-weight: 400; font-size: 11.5px; box-shadow: none; }
+.rail .b-rail i { font-size: 11px; }
+.rail .b-rail span { display: none; }
+body.rail-larga .rail .b-rail { left: 12px; right: 12px; width: auto; justify-content: flex-start; padding: 0 0 0 16px; gap: 12px; }
+body.rail-larga .rail .b-rail span { display: inline; }
+/* durante la corsa (allargaBarra): la barra sopra la copia del contenuto di prima, le sue voci ferme alla misura larga,
+   scoperte man mano dalla barra che cresce. Allarga/Riduci cresce e cala con la barra (corsaInterna, 27/10/2026):
+   "Riduci" non esce dal pulsante */
+.rail.corre { z-index: 75; }
+.rail.corre .rail-marchio { right: auto; width: 236px; }
+.rail.corre .rail-voci { right: auto; width: 212px; }
+.rail.corre .b-rail { right: auto; width: 212px; overflow: hidden; }
+.copia-struttura { position: absolute; inset: 0; z-index: 70; pointer-events: none; }
+.copia-struttura .pagina { visibility: visible; }
+
+/* ================================================================ 6. barra in alto */
+/* alta 50, raggio 20 (con .scheda.piccola); dove sono a sinistra, utente / interruttori / ora della lettura /
+   pulsante principale medio a destra */
+.barra-alta { height: 50px; display: flex; align-items: center; padding: 0 8px 0 18px; border-radius: 20px; }
+.briciole { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; font-size: 12px; white-space: nowrap; }
+.briciole b { font-weight: 600; font-size: 12.5px; color: var(--c-testo); }
+.briciole .sigla { margin-left: 4px; flex: none; }
+.barra-destra { display: flex; align-items: center; gap: 14px; flex: none; }
+.utente { display: flex; align-items: center; gap: 8px; font-size: 11.5px; }
+.utente .iniziali { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--c-fondo_acc); border: 1px solid var(--c-bordo_forte); color: var(--c-accento);
+  font-weight: 600; font-size: 10px; line-height: 1; padding-bottom: 0.128em; }
+.letto { font-size: 11px; color: var(--c-tenue); white-space: nowrap; }
+.letto.accento { color: var(--c-accento); font-weight: 400; }
+
+/* ================================================================ 7. pagine che scorrono (barra di scorrimento del Tk) */
+/* una pagina parte 14 px prima del suo contenuto, cosi' l'ombra delle schede non si taglia sul bordo dell'area che
+   scorre; la barra di scorrimento della finestra Tk: traccia chiara, pomello grigio-blu (contrasto 3:1), larga 10 */
+.pagina { position: absolute; padding: 12px 6px 12px 14px; }
+.pagina.nascosta { visibility: hidden; pointer-events: none; }
+.pagina.uscente { z-index: 5; pointer-events: none; }
+.scorre { overflow-y: auto; overflow-x: hidden; padding-right: 6px; scrollbar-gutter: stable; }
+.scorre::-webkit-scrollbar { width: 10px; }
+.scorre::-webkit-scrollbar-track { background: var(--c-scorri_traccia); border-radius: 5px; }
+.scorre::-webkit-scrollbar-thumb { background: var(--c-scorri); border-radius: 5px; border: 2px solid var(--c-scorri_traccia); }
+.scorre::-webkit-scrollbar-thumb:hover { background: var(--c-scorri_su); }
+.scorre::-webkit-scrollbar-button { display: none; }
+
+/* ================================================================ 8. pulsanti (pulsante_img del Tk) */
+/* pillola piena alta 36, testo 12 semigrassetto, icona 12. Secondario bianco col bordo forte e il testo blu LASIT;
+   primario blu LASIT pieno; critico cremisi (spedisce email o spende crediti); spento grigio. Come nella finestra
+   Tk, NIENTE cambia sotto il mouse ne' alla pressione (cambia solo il cursore). */
+.pul { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 36px; border-radius: 18px; padding: 0 18px; white-space: nowrap; font-weight: 600; font-size: 12px;
+  background: var(--c-card_forte); border: 1px solid var(--c-bordo_forte); color: var(--c-blu_lasit); box-shadow: none;
+  text-shadow: none; transition: background var(--t-sopra) ease, border-color var(--t-sopra) ease; }
+.pul i { font-size: 12px; color: inherit; }
+.pul:hover { background: var(--c-card_forte); border-color: var(--c-bordo_forte); box-shadow: none; }
+.pul:active { transform: none; }
+/* la scritta di un pulsante sale di 0,064 em: il Tk centra le MAIUSCOLE, il browser il riquadro del testo */
+.pul > span { position: relative; top: -0.064em; }
+.pul.principale { background: var(--c-blu_lasit); border-color: transparent; color: #FFFFFF; font-weight: 600;
+  box-shadow: none; text-shadow: none; }
+.pul.principale i { color: #FFFFFF; }
+.pul.principale:hover { background: var(--c-blu_lasit); color: #FFFFFF; box-shadow: none; }
+.pul.principale:active { box-shadow: none; }
+.pul.critico { background: var(--c-btn_ko); border-color: transparent; color: #FFFFFF; }
+.pul.critico i { color: #FFFFFF; }
+.pul.critico:hover { background: var(--c-btn_ko); }
+.pul:disabled, .pul.spento, .pul.principale:disabled, .pul.principale.spento, .pul.critico:disabled, .pul.critico.spento {
+  background: var(--c-traccia); border-color: transparent; color: var(--c-tenue); box-shadow: none; text-shadow: none;
+  transform: none; cursor: default; }
+.pul:disabled i, .pul.spento i { color: var(--c-tenue); }
+.pul.medio { height: 32px; padding: 0 14px; font-size: 11.5px; }
+.pul.medio i { font-size: 11.5px; }
+/* il primario spento MA al lavoro ("Lettura in corso…"): il blu LASIT all'80% come nel Tk, coi colori GIA' composti
+   (#3D608E sul vetro della barra, il bianco all'80% #FCFEFF). MAI `opacity`: con l'opacita' < 1 il testo diventa grigio */
+.pul.principale.occupato:disabled { background: #3D608E; color: #FCFEFF; }
+.pul.principale.occupato:disabled i { color: #FCFEFF; }
+/* morbido (filtro acceso, scelta non attiva) e attivo (la scelta fra due pulsanti) */
+.pul.morbido { background: var(--c-fondo_acc); border-color: var(--c-bordo); color: var(--c-accento); }
+.pul.attivo { background: var(--c-blu_lasit); border-color: transparent; color: #FFFFFF; }
+
+/* ================================================================ 9. pillole, spie, colori di stato */
+/* pillole (chip_img): alte 22, raggio 11, testo 10,5 semigrassetto nel colore del livello, fondo tenue, bordo del
+   colore al 25%. Una pillola resta una pillola (span.sigla): un'altra regola di un contenitore non ne cambia la forma */
+.sigla { height: 22px; border-radius: 11px; padding: 0 10px 0.128em; display: inline-flex; align-items: center; gap: 4px;
+  font-weight: 600; font-size: 10.5px; }
+.sigla i { font-size: 9px; }
+span.sigla { display: inline-flex; align-items: center; justify-content: center; height: 22px; line-height: normal;
+  white-space: nowrap; overflow: visible; flex: none; }
+.l-ok { color: var(--c-ok); background: var(--c-fondo_ok); box-shadow: inset 0 0 0 1px #15703F40; }
+.l-warn { color: var(--c-warn); background: var(--c-fondo_warn); box-shadow: inset 0 0 0 1px #9C5E0040; }
+.l-ko { color: var(--c-ko); background: var(--c-fondo_ko); box-shadow: inset 0 0 0 1px #B4233540; }
+.l-mu { color: var(--c-mu); background: var(--c-fondo_mu); box-shadow: inset 0 0 0 1px #5D6F8740; }
+.l-acc { color: var(--c-accento); background: var(--c-fondo_acc); box-shadow: inset 0 0 0 1px #0077B640; }
+.c-ok { color: var(--c-ok); } .c-ko { color: var(--c-ko); } .c-testo { color: var(--c-testo); }
+.c-warn { color: var(--c-warn); } .c-mu { color: var(--c-mu); } .c-acc { color: var(--c-accento); }
+.c-tenue { color: var(--c-tenue); }
+/* le pillole che filtrano: la scelta ha un anello del suo colore 3 px fuori; con un filtro acceso le altre sono spente */
+.sigla.cliccabile { cursor: pointer; position: relative; }
+.sigla.spenta { color: var(--c-tenue); background: var(--c-fondo_mu); box-shadow: inset 0 0 0 1px #56678340; }
+.sigla.scelta::after { content: ""; position: absolute; inset: -3px; border-radius: 14px; border: 1px solid currentColor; }
+/* le spie (riga_spia): pallino 8 del colore del livello e testo 11 semigrassetto scuro. Le spie NON pulsano: un'animazione
+   infinita resta attaccata alla pagina e tiene i testi su uno strato a parte */
+.spia-s { display: inline-flex; align-items: center; gap: 6px; height: 20px; font-weight: 600; font-size: 11px;
+  color: var(--c-testo); white-space: nowrap; }
+.pallino { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex: none; }
+.spia { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--c-tenue); }
+/* la tessera con l'icona: 40 (raggio 12, icona 18), piccola 30 (raggio 9, icona 14); fondo azzurrino, bordo accento al 19% */
+.tessera { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; flex: none;
+  background: var(--c-fondo_acc); border: 1px solid #0077B630; color: var(--c-accento); font-size: 18px; }
+.tessera.piccola { width: 30px; height: 30px; border-radius: 9px; font-size: 14px; }
+/* avatar (_avatar): il tondo col fondo tenue del livello, le iniziali 9 semigrassetto. Centraggio MISURATO a tre grandezze
+   di finestra: le iniziali piccole (9 px, interlinea 1) col margine sotto di 0,128 em stavano 1-2 px sopra il centro;
+   scese di 0,032 em (margine sopra 0,064 em) stanno entro 1 px. Quelle grandi (14 px) restano col margine sotto */
+.avatar { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-weight: 600; font-size: 9px; line-height: 1; padding-top: 0.064em; }
+.avatar.piccolo { width: 28px; height: 28px; }
+.avatar.grande { width: 46px; height: 46px; font-size: 14px; padding-top: 0; padding-bottom: 0.128em; }
+/* testo-link azzurro e indirizzo email sottolineato */
+.link { color: var(--c-accento); font-weight: 600; font-size: 10.5px; cursor: pointer; }
+.email-link { color: var(--c-accento); font-weight: 600; font-size: 11px; cursor: pointer; text-decoration: underline;
+  text-underline-offset: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.quieto { color: var(--c-tenue); font-size: 11.5px; }
+.vuoto-riga { color: var(--c-tenue); font-size: 11px; padding: 4px 0; }
+
+/* ================================================================ 10. levetta, interruttore a levetta, selettore a pillola */
+/* la levetta (interruttore_img): 34 x 18, verde (ok) col pomello a destra se accesa, #C3CEDC se spenta; il colore
+   sfuma e il pomello scorre (130 ms) */
+.levetta { position: relative; width: 34px; height: 18px; border-radius: 9px; flex: none; background: #C3CEDC;
+  transition: background var(--t-interruttore) var(--e-soft); }
+.levetta::after { content: ""; position: absolute; left: 3px; top: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: #FFFFFF; transition: transform var(--t-interruttore) var(--e-soft); }
+.acceso > .levetta { background: var(--c-ok); }
+.acceso > .levetta::after { transform: translateX(16px); }
+/* la pillola con la levetta ("Solo mai contattati"): alta 36 (raggio 18), testo 11 semigrassetto; accesa verde chiaro */
+.interruttore-rd { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; height: 36px; padding: 0 16px 0 12px;
+  border-radius: 18px; background: var(--c-card_forte); border: 1px solid var(--c-bordo_forte); cursor: pointer; font-weight: 600;
+  font-size: 11px; color: var(--c-testo); transition: background var(--t-interruttore) ease, border-color var(--t-interruttore) ease; }
+.interruttore-rd.acceso { background: var(--c-fondo_ok); border-color: #15703F55; color: var(--c-ok); }
+/* la versione della barra in alto ("Popup notifiche"): alta 32, raggio 16, la levetta a destra; accesa resta bianca
+   (cambia solo la levetta) */
+.interruttore-rd.popup { gap: 10px; height: 32px; padding: 0 9px 0 14px; border-radius: 16px; font-size: 11px;
+  color: var(--c-testo); }
+.interruttore-rd.popup.acceso { background: var(--c-card_forte); border-color: var(--c-bordo_forte); color: var(--c-testo); }
+/* il selettore a pillola (_segmentato): alto 34, fondo grigio-azzurro col bordo, la voce scelta in blu LASIT (rientro 3,
+   raggio 14) col testo bianco, le altre in scuro; testo 10,5 semigrassetto. La pillola scorre (130 ms). Colonne
+   minmax(0, 1fr): con 1fr la voce piu' lunga si allargava e la pillola non coincideva piu' col pulsante */
+.interruttore { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); height: 34px;
+  border-radius: 17px; padding: 3px; background: var(--c-fondo_mu); border: 1px solid var(--c-bordo); }
+.interruttore button { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-weight: 600; font-size: 10.5px; color: var(--c-testo); padding: 0 11px 0.128em; white-space: nowrap;
+  transition: color var(--t-interruttore) var(--e-soft); }
+.interruttore button span { position: relative; top: 0; }
+.interruttore button:not(.scelto):hover { color: var(--c-testo); }
+.interruttore button.scelto { color: #FFFFFF; text-shadow: none; }
+.interruttore .pillola-scelta { position: absolute; left: 3px; top: 3px; bottom: 3px; width: calc((100% - 6px) / 2);
+  border-radius: 14px; background: var(--c-blu_lasit); border: 0; box-shadow: none;
+  transition: transform var(--t-interruttore) var(--e-soft); }
+.interruttore.destra .pillola-scelta { transform: translateX(100%); }
+/* a tre voci (obiettivo 100 / 500 / 1.000) */
+.interruttore.tre { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); }
+.interruttore.tre .pillola-scelta { width: calc((100% - 6px) / 3); }
+.interruttore.tre.pos1 .pillola-scelta { transform: translateX(100%); }
+.interruttore.tre.pos2 .pillola-scelta { transform: translateX(200%); }
+.obiettivo { display: flex; align-items: center; gap: 8px; }
+.obiettivo .et { font-size: 10px; color: var(--c-tenue); }
+.obiettivo .interruttore { flex: none; }
+
+/* ================================================================ 11. campi: a tendina (campo_img) e di testo */
+/* alti 44, raggio 14, bianchi col bordo forte (azzurro se filtrano o aperti); etichetta 9,5 tenue in alto, scelta 11,5
+   semigrassetto (azzurra se filtra), freccetta 9 */
+.tendina { position: relative; height: 44px; border-radius: 14px; background: var(--c-card_forte); border: 1px solid var(--c-bordo_forte);
+  display: flex; flex-direction: column; justify-content: flex-start; padding: 5px 36px 0 12px; text-align: left; min-width: 0; }
+.tendina.acceso { border-color: var(--c-accento); }
+.tendina.aperta { border-color: var(--c-accento); }
+.tendina .et { font-weight: 400; font-size: 9.5px; color: var(--c-tenue); line-height: 13px; }
+.tendina .va { margin-top: 2px; font-weight: 600; font-size: 11.5px; line-height: 16px; color: var(--c-testo); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.tendina.acceso .va { color: var(--c-accento); }
+.tendina > i { position: absolute; right: 14px; top: 50%; margin-top: -5px; font-size: 9px; color: var(--c-tenue); }
+.campi { display: flex; gap: 10px; align-items: center; }
+.campi.filtri { display: grid; grid-template-columns: repeat(4, 1fr); }
+/* il campo di testo (le finestrelle di ARES): bianco, squadrato, filo #D2DEEC, alto 34; azzurro quando si scrive */
+.campo { display: flex; align-items: center; height: 34px; padding: 0 14px; border-radius: 0; background: #FFFFFF;
+  border: 1px solid var(--c-bordo_opaco); transition: border-color var(--t-sopra) ease, box-shadow var(--t-sopra) ease; }
+.campo:focus-within { border-color: var(--c-accento); box-shadow: none; }
+.campo input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: transparent;
+  font: 400 13.3px "Segoe UI"; color: var(--c-campo_testo); user-select: text; -webkit-user-select: text; }
+.campo input::placeholder { color: var(--c-tenue); }
+
+/* ================================================================ 12. avvisi */
+/* avviso (_avviso): fondo tenue del livello (classe l-...), raggio 14, barretta 3 a 6 dal bordo; titolo 12
+   semigrassetto colorato, traccia Consolas 10, testo 11 */
+.avviso { position: relative; border-radius: 14px; padding: 12px 14px 12px 18px; }
+.avviso::before { content: ""; position: absolute; left: 6px; top: 10px; bottom: 10px; width: 3px; border-radius: 2px;
+  background: currentColor; }
+.avviso b { display: block; font-weight: 600; font-size: 12px; line-height: 16px; }
+.avviso .traccia { margin-top: 6px; font: 10px/14.5px Consolas, monospace; color: var(--c-testo_traccia); white-space: pre-wrap;
+  word-break: break-word; }
+.avviso .testo { margin-top: 6px; font-size: 11px; line-height: 16px; color: var(--c-testo); white-space: pre-line; }
+.avvisi { display: flex; flex-direction: column; gap: 10px; }
+.corpo > .avviso + *, .corpo > .avvisi + * { margin-top: 10px; }
+/* la riga rossa delle avarie (_riquadro_banner): pannello piatto rosa, bordo cremisi, raggio 14, testo 11,5 */
+.scheda.banner-ko { border-radius: 14px; background: var(--c-fondo_ko); border-color: #B4233599; box-shadow: var(--ombra); }
+.banner-ko .dentro { display: flex; gap: 8px; align-items: flex-start; padding: 10px; color: var(--c-ko); font-weight: 600;
+  font-size: 11.5px; line-height: 15.5px; }
+.banner-ko .dentro i { width: 22px; height: 22px; display: grid; place-items: center; font-size: 11px; flex: none; margin-top: -3px; }
+/* "in attesa" (_rd_stato_attesa): tessera 20 con l'orologio, testo 11 semigrassetto azzurro */
+.attesa { display: flex; align-items: center; gap: 8px; color: var(--c-accento); font-weight: 600; font-size: 11px; line-height: 1.4; }
+.attesa .tessera.piccola { width: 20px; height: 20px; border-radius: 6px; font-size: 10px; }
+
+/* ================================================================ 13. tabelle */
+/* intestazioni 8,5 semigrassetto spaziate tenui col filo sotto; righe col filo, numeri a destra a cifre uguali */
+.tabella { display: grid; font-size: 11px; }
+.t-testa, .t-riga { display: grid; grid-template-columns: var(--colonne); align-items: center; column-gap: 10px; }
+.t-testa { height: 20px; padding: 0 10px; border-bottom: 1px solid var(--c-bordo); font-weight: 600; font-size: 8.5px;
+  letter-spacing: 0.8px; color: var(--c-tenue); text-transform: uppercase; align-items: start; }
+.t-riga { min-height: 26px; padding: 2px 10px; border-bottom: 1px solid var(--c-bordo); }
+.t-riga:last-child { border-bottom: 0; }
+.t-testa > *, .t-riga > * { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t-riga .d, .t-testa .d { text-align: right; font-variant-numeric: tabular-nums; }
+.t-riga .forte { font-weight: 600; }
+.t-riga .mono { font: 9.5px Consolas, monospace; color: var(--c-tenue); }
+.t-riga .tenue { color: var(--c-tenue); }
+.t-riga .sotto { display: block; font-size: 10px; color: var(--c-tenue); font-weight: 400; margin-top: 1px; }
+.t-riga .sigla { justify-self: start; }
+.t-riga.cliccabile { cursor: pointer; }
+.t-riga.attiva { background: var(--c-fondo_acc); box-shadow: inset 0 0 0 1px #0077B660; border-radius: 8px; }
+.t-riga .ok { color: var(--c-ok); font-weight: 600; }
+/* righe alte 46 con il nome 11,5 semigrassetto e l'indirizzo sotto */
+.tab-caselle .t-riga { min-height: 46px; font-size: 11.5px; }
+
+/* ================================================================ 14. anelli, striscia di stato, quote, barre */
+.anello { position: relative; flex: none; }
+.anello svg { display: block; }
+.anello .centro { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 700; line-height: 1;
+  color: var(--c-testo); font-variant-numeric: tabular-nums; padding-bottom: 0.128em; }
+.anello .centro.ignoto { color: var(--c-tenue); }
+/* la striscia di stato (_riquadro_stato): margine 14, raggio 20; tessera 36 (raggio 12, icona 14), titolo 13,5, le spie
+   sotto; a destra numeri 19 con l'etichetta 10,5 su due righe, i fili #D2DEEC, gli anelli 44 col titolo 10,5 */
+.stato-riga { display: flex; align-items: center; gap: 20px; padding: 14px; }
+.stato-sx { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 14px; }
+.stato-sx .tessera { width: 36px; height: 36px; border-radius: 12px; font-size: 14px; }
+.stato-sx .testi { min-width: 0; display: flex; flex-direction: column; }
+.stato-sx .titolo { font-weight: 600; font-size: 13.5px; line-height: 21px; color: var(--c-testo); }
+.stato-sx .quieto { margin-top: 2px; font-size: 11px; }
+.spie-riga { display: flex; flex-wrap: wrap; column-gap: 14px; }
+.stato-dx { display: flex; align-items: center; flex: none; }
+.stato-dx .pezzo { display: flex; align-items: center; gap: 8px; padding: 0 16px 0 14px; position: relative; }
+.stato-dx .pezzo + .pezzo::before { content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 1px; background: var(--c-bordo_opaco); }
+.stato-dx .pezzo:first-child { padding-left: 0; }
+.stato-dx .num { font-weight: 600; font-size: 19px; line-height: 1; font-variant-numeric: tabular-nums; }
+.stato-dx .eti { font-size: 10.5px; color: var(--c-tenue); line-height: 14px; max-width: 64px; display: inline-block; }
+.stato-dx .eti::first-letter { text-transform: uppercase; }
+.stato-dx .an-testi { margin-left: 2px; }
+.stato-dx .an-testi b { display: block; font-weight: 600; font-size: 10.5px; line-height: 15px; }
+.stato-dx .an-testi span { display: block; font-size: 9.5px; color: var(--c-tenue); line-height: 14px; }
+.stato-dx .an-testi .nota { max-width: 150px; white-space: normal; }
+/* le quote (_riquadro_quota): un anello 58 ogni 96, righe ogni 104; nome 10,5 e quota 10 semigrassetto */
+.quota-riga { display: flex; flex-direction: column; }
+.quote { display: grid; grid-template-columns: repeat(auto-fill, 96px); row-gap: 0; }
+.quota { height: 104px; display: flex; flex-direction: column; align-items: center; }
+.quota .nome { max-width: 88px; margin-top: 6px; font-weight: 600; font-size: 10.5px; line-height: 14px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.quota .sotto { font-weight: 600; font-size: 10px; line-height: 14px; margin-top: 1px; }
+/* la barra di avanzamento: alta 8 (raggio 4), traccia + accento; nelle righe delle barre alta 6 (raggio 3), con
+   l'etichetta 10,5 larga 118 e il numero 11 semigrassetto largo 52. Si riempie con transform (240 ms a penna) */
+.barra { height: 8px; border-radius: 4px; background: var(--c-traccia); overflow: hidden; }
+.barra .pieno { height: 100%; width: 100%; border-radius: 4px; background: var(--c-accento); transform-origin: left center;
+  transform: scaleX(0); transition: transform 240ms var(--e-pen), background 200ms ease; }
+.barra .pieno.verde { background: var(--c-quota_piena); }
+.barra .pieno.rosso { background: var(--c-ko); }
+.barre { display: flex; flex-direction: column; margin-top: 4px; }
+.barra-riga { display: grid; grid-template-columns: 118px 1fr 52px; align-items: center; height: 24px; font-size: 10.5px; }
+.barra-riga .eti { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-riga .barra { height: 6px; border-radius: 3px; }
+.barra-riga .barra .pieno { border-radius: 3px; }
+.barra-riga .n { text-align: right; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums; }
+
+/* ================================================================ 15. grafico a corsie (l'Andamento) */
+/* etichette larghe 64, corsie alte 56, numero finale 10 semigrassetto nel colore della serie; legenda 10 tenue col
+   pallino 8; date 9,5 (mai due date addosso: quella prima dell'ultima si salta a meno di 48 px) */
+.legenda { display: flex; gap: 14px; justify-content: flex-end; font-size: 10px; color: var(--c-tenue); margin-bottom: 6px; }
+.legenda span { display: inline-flex; align-items: center; gap: 5px; }
+.corsia { display: grid; grid-template-columns: 64px 1fr 30px; align-items: center; height: 56px; }
+.corsia .eti { font-size: 10.5px; color: var(--c-tenue); }
+.corsia svg { display: block; overflow: visible; }
+.corsia .ultimo { font-weight: 600; font-size: 10px; padding-left: 9px; font-variant-numeric: tabular-nums; align-self: start; margin-top: 4px; }
+.periodi { position: relative; height: 18px; margin-left: 64px; margin-right: 30px; font-size: 9.5px; color: var(--c-tenue); }
+.periodi span { position: absolute; top: 4px; width: 80px; margin-left: -40px; text-align: center; white-space: nowrap; }
+.punto { cursor: default; }
+
+/* ================================================================ 16. tessere dei numeri, tassi, proiezione, testate */
+.tessere { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.tessere .scheda { border-radius: 18px; }
+.tessera-an { padding: 14px; }
+.tessera-an .t { font-size: 10.5px; line-height: 14px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tessera-an .v { margin-top: 2px; font-weight: 600; font-size: 21px; line-height: 30px; font-variant-numeric: tabular-nums; }
+.tessera-an .s { margin-top: 2px; font-size: 9.5px; line-height: 14px; color: var(--c-tenue); display: -webkit-box;
+  -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.v.c-ok { color: var(--c-ok); } .v.c-ko { color: var(--c-ko); } .v.c-warn { color: var(--c-warn); }
+.tasso { display: flex; gap: 14px; align-items: flex-start; padding: 14px !important; }
+.tasso .testi b { display: block; font-weight: 600; font-size: 12px; line-height: 16px; margin-top: 2px; }
+.tasso .testi span { display: block; font-size: 10px; color: var(--c-tenue); line-height: 15px; }
+.tasso .testi span:nth-of-type(1) { font-size: 10.5px; margin-top: 4px; }
+.tasso .testi span:nth-of-type(3) { color: var(--c-tenue_2); }
+.proiezione { font-weight: 600; font-size: 13px; line-height: 18px; }
+.dettaglio-acc { margin-top: 8px; padding: 10px 14px; border-radius: 14px; background: var(--c-fondo_acc);
+  border: 1px solid #0077B630; font-size: 10.5px; line-height: 15px; }
+/* le testate delle tabelle (_riq_an_testa_tabella): raggio 20, bianche quando aperte; titolo 12, pillola, freccetta */
+.teste-tabelle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.teste-tabelle .scheda { border-radius: 20px; cursor: pointer; }
+.teste-tabelle .scheda.aperta { background: var(--c-card_forte); }
+.testa-tab { padding: 14px; }
+.testa-tab .r1 { display: flex; align-items: center; gap: 10px; height: 22px; }
+.testa-tab .r1 b { font-weight: 600; font-size: 12px; }
+.testa-tab .r1 i { margin-left: auto; color: var(--c-tenue); font-size: 12px; }
+.testa-tab .r2 { display: flex; gap: 10px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--c-bordo); font-size: 10.5px; }
+.testa-tab .r2 span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.testa-tab .r2 b { font-weight: 600; white-space: nowrap; }
+
+/* ================================================================ 17. registro delle notifiche */
+/* colonne opache (#F4F9FE, bordo #D2DEEC, raggio 16); intestazione 8,5 spaziata; schede alte 66, raggio 12, bianche
+   (azzurrine col bordo azzurro se non viste), barretta 3 del colore del tipo, ora in Consolas 9,5 */
+.registro { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.registro.una { grid-template-columns: 1fr; }
+.colonna-reg { border-radius: 16px; background: var(--c-opaco); border: 1px solid var(--c-bordo_opaco); padding: 9px 2px 8px 8px;
+  min-width: 0; }
+.colonna-reg .intest { display: flex; font-weight: 600; font-size: 8.5px; letter-spacing: 0.8px; color: var(--c-tenue);
+  text-transform: uppercase; padding: 0 4px 8px 4px; white-space: nowrap; line-height: 12px; }
+.colonna-reg .intest .lungo { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.colonna-reg .intest .corto, .colonna-reg .intest.stretta .lungo { display: none; }
+.colonna-reg .intest.stretta .corto { display: inline; }
+.colonna-reg .intest .n { flex: none; white-space: pre; }
+.lista-reg { max-height: 288px; overflow-y: auto; overflow-x: hidden; padding-right: 6px; display: flex; flex-direction: column; gap: 8px; }
+.lista-reg::-webkit-scrollbar { width: 4px; }
+.lista-reg::-webkit-scrollbar-thumb { background: var(--c-tenue); border-radius: 2px; }
+.lista-reg::-webkit-scrollbar-track { background: var(--c-traccia); border-radius: 2px; }
+.notifica { position: relative; flex: none; height: 66px; border-radius: 12px; background: #FFFFFF; border: 1px solid var(--c-bordo_opaco);
+  padding: 6px 10px 0 14px; cursor: default; }
+.notifica::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 3px; border-radius: 2px;
+  background: var(--segno); }
+.notifica.nuova { background: var(--c-riga_nuova); border-color: var(--c-accento); }
+.notifica .r1 { display: flex; align-items: center; gap: 5px; height: 22px; }
+/* le pillole che non ci stanno vanno a capo e la seconda riga non si vede: l'ora resta sempre intera */
+.notifica .r1-chip { flex: 1; min-width: 0; height: 22px; display: flex; flex-wrap: wrap; align-items: center;
+  column-gap: 5px; overflow: hidden; }
+.notifica .r1 .sigla { flex: none; }
+.notifica .r1 .piu { font: 9.5px Consolas, monospace; color: var(--c-tenue); }
+.notifica .r1 .ora { margin-left: auto; font: 9.5px Consolas, monospace; color: var(--c-tenue); flex: none; }
+.notifica .r1 .pallino { color: var(--c-ko); margin-right: 1px; }
+.notifica .r2 { margin-top: 3px; font-weight: 600; font-size: 11px; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notifica .r3 { margin-top: 1px; font-size: 10.5px; line-height: 14px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.non-viste { cursor: pointer; }
+
+/* ================================================================ 18. colonne di schede (Risposte dei contatti) */
+/* tre colonne azzurrine (raggio 18, margine 12, senza ombra): titolo 12, il numero in una pillola bianca col bordo
+   forte, la freccetta; la scheda intera bianca (raggio 14), nome 12, corpo 11 tagliato a 8 righe */
+.risposte { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: start; }
+.colonna-risp { border-radius: 18px; background: var(--c-card_tenue); border: 1px solid var(--c-bordo); padding: 12px; min-width: 0; }
+.colonna-risp .ct { display: flex; align-items: center; gap: 8px; height: 24px; cursor: pointer; }
+.colonna-risp .ct b { flex: 1; min-width: 0; font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.colonna-risp .ct .n { box-sizing: border-box; min-width: 22px; height: 22px; padding: 0 8px 0.128em; border-radius: 11px;
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-variant-numeric: tabular-nums;
+  font-size: 10.5px; font-weight: 600; background: #FFFFFF; border: 1px solid var(--c-bordo_forte); }
+.colonna-risp .ct i { color: var(--c-tenue); font-size: 12px; width: 14px; text-align: center; }
+.colonna-risp .cc { margin-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.persona { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.persona .testi { min-width: 0; flex: 1; }
+.persona .testi b { display: block; font-weight: 600; font-size: 11px; line-height: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.persona .testi span { display: block; font-size: 10px; line-height: 14px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scheda-risp { border-radius: 14px; background: var(--c-card_forte); border: 1px solid var(--c-bordo); padding: 13px 14px; }
+.scheda-risp .sr1 { display: flex; gap: 10px; align-items: center; }
+.scheda-risp .sr1 .testi { flex: 1; min-width: 0; }
+.scheda-risp .sr1 .testi b { font-size: 12px; }
+.scheda-risp .sr1 .testi span { font-size: 10.5px; }
+.scheda-risp .sr1 .data { font-size: 10px; color: var(--c-tenue); align-self: flex-start; white-space: nowrap; }
+.scheda-risp .chip { display: flex; gap: 6px; margin-top: 8px; }
+.scheda-risp .testo { margin-top: 8px; font-size: 11px; line-height: 16px; white-space: pre-line; word-break: break-word; }
+.scheda-risp .testo.corto { display: -webkit-box; -webkit-line-clamp: 8; -webkit-box-orient: vertical; overflow: hidden; }
+.scheda-risp .link { display: inline-block; margin-top: 4px; }
+.scheda-risp .email-link { margin-top: 6px; }
+.scheda-risp .oggetto { margin-top: 3px; font-size: 10.5px; color: var(--c-tenue); }
+
+/* ================================================================ 19. sotto-sezioni richiudibili, giornata */
+/* la riga richiudibile: alta 38, raggio 14, azzurrina col bordo (del livello al 50% se avaria); freccetta, titolo 12,
+   pillole, contatore 10,5 a destra */
+.due-colonne { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start; }
+.due-colonne > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.sotto-sez { border-radius: 14px; overflow: hidden; }
+.sotto-sez .st { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 14px 0 11px; cursor: pointer;
+  border-radius: 14px; background: var(--c-card_tenue); border: 1px solid var(--c-bordo); }
+.sotto-sez.bordo-ko .st { border-color: #B4233580; } .sotto-sez.bordo-warn .st { border-color: #9C5E0080; }
+.sotto-sez .st > i { color: var(--c-tenue); font-size: 10px; width: 12px; text-align: center; }
+.sotto-sez .st b { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; }
+.sotto-sez .st .cont { margin-left: auto; font-size: 10.5px; color: var(--c-tenue); white-space: nowrap; }
+.sotto-sez .sc { padding: 8px 0 0 14px; }
+.sotto-sez.chiusa .sc { display: none; }
+.sotto-sez .tabella { font-size: 11px; }
+.sotto-sez .t-riga { min-height: 22px; padding: 1px 4px 1px 0; }
+.sotto-sez .t-testa { padding: 0 4px 0 0; height: 18px; }
+.giornata .g-riga { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 10px; height: 26px; font-size: 11px; }
+.giornata .g-riga .mono { font: 10px Consolas, monospace; color: var(--c-tenue); }
+.giornata .g-riga span:not(.sigla) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.giornata .el-testo.forte { font-size: 11.5px; }
+
+/* ================================================================ 20. righe brevi con un'azione (Email ricevute) */
+/* pillole degli esiti a 8 l'una dall'altra; "Mostra tutte" alto 30; righe alte 54, raggio 14, azzurrine col bordo:
+   pillola in una colonna di 116, nome 11,5 con l'indirizzo 10 sotto, dettagli 10, data 10 a destra, "Leggi" 84 x 30 */
+.chip-esiti { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 8px; align-items: center; }
+.testa-email { display: flex; gap: 14px; align-items: flex-start; }
+.testa-email .chip-esiti { flex: 1; }
+.testa-email .pul { height: 30px; padding: 0 14px; font-size: 10.5px; }
+.mostrate { margin-top: 8px; font-weight: 600; font-size: 10.5px; }
+.righe-email { display: flex; flex-direction: column; gap: 8px; }
+.riga-email { display: grid; grid-template-columns: 116px minmax(0, 0.42fr) minmax(0, 0.58fr) auto 84px; align-items: center;
+  column-gap: 10px; height: 54px; padding: 0 12px; border-radius: 14px; background: var(--c-card_tenue); border: 1px solid var(--c-bordo); }
+.riga-email > * { min-width: 0; }
+.riga-email b { display: block; font-weight: 600; font-size: 11.5px; line-height: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* mai le pillole: una regola sugli span della riga le faceva blocchi col testo in alto */
+.riga-email span:not(.sigla) { display: block; font-size: 10px; line-height: 15px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.riga-email .quando { text-align: right; padding-right: 4px; }
+.riga-email .sigla { justify-self: start; }
+.riga-email .pul { width: 84px; height: 30px; padding: 0; font-size: 10.5px; }
+
+/* ================================================================ 21. passi, elementi di un passo, conferma (Radar) */
+/* tre passi (raggio 20, margine 10): riquadri alti 46 (raggio 16), azzurrino col bordo azzurro quello aperto; il tondo 26:
+   blu LASIT (aperto), verde con la spunta (fatto), azzurro chiaro (gli altri); titolo 11,5, sotto 10 */
+.passi-rd { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.scheda.passi { border-radius: 20px; }
+.scheda.passi .corpo { padding: 10px; }
+.passo-rd { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 12px; border-radius: 16px; min-width: 0;
+  background: var(--c-card_tenue); border: 1px solid var(--c-bordo); cursor: pointer; text-align: left; }
+.passo-rd.attivo { background: var(--c-fondo_acc); border-color: #0077B699; }
+.passo-rd .badge { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font-weight: 600; font-size: 10.5px; line-height: 1; font-variant-numeric: tabular-nums; padding-bottom: 0.128em;
+  background: #0077B630; color: var(--c-blu_lasit); box-shadow: inset 0 0 0 1px #0077B655; }
+.passo-rd.attivo .badge { background: var(--c-blu_lasit); color: #FFFFFF; box-shadow: none; }
+.passo-rd.fatto .badge { background: var(--c-ok); color: #FFFFFF; box-shadow: none; font-size: 10px; }
+.passo-rd .testi { min-width: 0; }
+.passo-rd .testi b { display: block; font-weight: 600; font-size: 11.5px; line-height: 16px; }
+.passo-rd .testi span { display: block; font-size: 10px; line-height: 14px; margin-top: 2px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.elementi { display: flex; flex-direction: column; gap: 12px; }
+.el-pulsanti { display: flex; gap: 16px; align-items: center; }
+.el-pulsanti .pul { height: 38px; }
+.el-pulsanti .nota { font-size: 10.5px; font-weight: 600; }
+.el-pulsanti .nota.c-tenue { font-weight: 400; }
+.el-testo { font-size: 11px; line-height: 1.45; }
+.el-testo.forte { font-weight: 600; }
+.el-titolo { display: flex; align-items: baseline; gap: 12px; min-width: 0; margin-top: 4px; }
+.el-titolo b { font-weight: 600; font-size: 12.5px; flex: none; }
+.el-titolo span { font-size: 11px; color: var(--c-tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* elenco di voci con pulsanti (ricerche conservate): righe alte 40 (raggio 12), nome 11,5, dettaglio 10,5, pulsanti 30 */
+.conservate { display: flex; flex-direction: column; gap: 8px; }
+.conservate > b { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+.conservata { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 10px 0 14px; border-radius: 12px;
+  background: var(--c-card_tenue); border: 1px solid var(--c-bordo); }
+.conservata b { font-weight: 600; font-size: 11.5px; flex: none; }
+.conservata span { flex: 1; min-width: 0; font-size: 10.5px; color: var(--c-tenue); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+.conservata .pul { flex: none; height: 30px; padding: 0 14px; font-size: 11px; }
+/* elenco di scelte con casella e descrizione (i marchi del gruppo del Radar, 26/10/2026): titolo 12 con la nota e un
+   link a destra; righe come le ricerche conservate (raggio 12) con la casella del menu, nome 11,5, dettaglio 10,5,
+   descrizione 11; la riga scelta prende il fondo dell'accento */
+.marchi-gruppo { display: flex; flex-direction: column; gap: 8px; }
+.marchi-testa { display: flex; align-items: baseline; gap: 10px; margin-bottom: 2px; }
+.marchi-testa b { font-weight: 600; font-size: 12px; }
+.marchi-testa .marchi-nota { font-size: 10.5px; color: var(--c-tenue); }
+.marchi-testa .link { margin-left: auto; font-size: 11px; }
+.marchio { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+  background: var(--c-card_tenue); border: 1px solid var(--c-bordo);
+  transition: background var(--t-sopra) ease, border-color var(--t-sopra) ease; }
+.marchio:hover { border-color: var(--c-bordo_forte); }
+.marchio.si { background: var(--c-fondo_acc); border-color: var(--c-accento); }
+.marchio .m-casella { margin-top: 2px; }
+.marchio .m-casella.si { border-color: var(--c-accento); }
+/* una voce che non si sceglie: niente clic, la casella non c'e' ma tiene il posto */
+.marchio.fissa { cursor: default; }
+.marchio.fissa:hover { border-color: var(--c-bordo); }
+.marchio .m-casella.vuota { border-color: transparent; }
+.marchio-testi { flex: 1; min-width: 0; }
+.marchio-nome { display: flex; align-items: center; gap: 8px; min-height: 22px; }
+.marchio-nome b { font-weight: 600; font-size: 11.5px; }
+.marchio-det { font-size: 10.5px; color: var(--c-tenue); margin-top: 1px; }
+.marchio-descr { font-size: 11px; line-height: 1.45; margin-top: 4px; }
+/* riquadro dei conteggi (esclusi): raggio 16, azzurrino col bordo; quattro pillole alte 28 */
+.esclusi { border-radius: 16px; background: var(--c-card_tenue); border: 1px solid var(--c-bordo); padding: 12px 14px; }
+.esclusi .e1 { display: flex; align-items: center; }
+.esclusi .e1 b { font-weight: 600; font-size: 11.5px; }
+.esclusi .e1 span { margin-left: auto; font-weight: 600; font-size: 10.5px; color: var(--c-tenue); }
+.esclusi .e2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.esclusi .e2 div { display: flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 14px;
+  background: #FFFFFFB0; border: 1px solid var(--c-bordo); font-size: 10.5px; color: var(--c-tenue); }
+.esclusi .e2 b { margin-left: auto; color: var(--c-testo); font-weight: 600; font-variant-numeric: tabular-nums; }
+.esclusi .e3 { margin-top: 8px; font-size: 10px; color: var(--c-tenue); }
+.testa-anteprima { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 11.5px; }
+/* la conferma (raggio 20, margine 12): pillola, etichetta 11, il numero 19, la nota 10, il pulsante rosso alto 40 */
+.conferma-rd { display: flex; align-items: center; gap: 12px; padding: 12px; min-height: 64px; }
+.conferma-rd .eti { font-size: 11px; }
+.conferma-rd .num { font-weight: 600; font-size: 19px; line-height: 1; font-variant-numeric: tabular-nums; }
+.conferma-rd .nota { font-weight: 600; font-size: 10px; }
+.conferma-rd .pul { margin-left: auto; height: 40px; border-radius: 20px; }
+.scheda.conferma { border-radius: 20px; }
+.ic-radar { display: inline-block; width: 15px; height: 15px; vertical-align: middle; }
+
+/* ================================================================ 22. suggerimenti */
+/* quelli brevi (e della barra laterale, _mostra_tip_rail): vetro su bianco, alti 32, raggio 10, testo 11,5
+   semigrassetto; quelli lunghi (_mostra_tip, la scheda di una notifica, i numeri di un periodo): riquadro squadrato */
+#suggerimento { position: absolute; z-index: 150; pointer-events: none; padding: 0 14px; height: 32px; line-height: 32px;
+  border-radius: 10px; background: var(--vetro), #FFFFFF; border: 1px solid var(--c-bordo_opaco); color: var(--c-testo);
+  font-size: 11.5px; font-weight: 600; box-shadow: 0 6px 18px rgba(16, 58, 114, 0.14); white-space: nowrap; opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity var(--t-suggerimento) var(--e-out), transform var(--t-suggerimento) var(--e-out); }
+#suggerimento.su { opacity: 1; transform: none; }
+#suggerimento.lungo { height: auto; line-height: normal; white-space: normal; max-width: 470px; padding: 10px 14px; font-weight: 400;
+  border-radius: 0; background: var(--c-card_forte); }
+#suggerimento.lungo .s-testa { font-weight: 600; font-size: 12px; }
+#suggerimento.lungo .s-titolo { font-weight: 600; font-size: 13.3px; margin-top: 4px; margin-bottom: 2px; }
+#suggerimento.lungo .s-testo { font-size: 13.3px; line-height: 1.35; white-space: pre-wrap; word-break: break-word; }
+#suggerimento.lungo .s-esito { font-weight: 600; font-size: 12px; margin-top: 4px; }
+#suggerimento.lungo .s-riga { display: flex; align-items: center; gap: 7px; font-size: 13.3px; margin-top: 3px; color: var(--c-tenue); }
+#suggerimento.lungo .s-riga.corrente { color: var(--c-testo); font-weight: 600; }
+#suggerimento.lungo .s-riga b { margin-left: auto; padding-left: 18px; color: var(--c-testo); font-variant-numeric: tabular-nums; }
+
+/* ================================================================ 23. menu e tendina (_tendina_elenco) */
+/* bianco, filo #D2DEEC, raggio 8, righe alte 34 (con "nome · dettaglio" piu' alte), margine 6; spunta azzurra o
+   casella; testo 13,3 (10 pt), la scelta semigrassetta azzurra; sotto il mouse la riga si fa azzurrina. Scende di
+   8 px comparendo (180 ms) */
+#menu { position: absolute; z-index: 140; min-width: 220px; padding: 6px; border-radius: 8px; background: #FFFFFF;
+  border: 1px solid var(--c-bordo_opaco); box-shadow: 0 8px 24px rgba(16, 58, 114, 0.18);
+  animation: tendina var(--t-tendina) var(--e-out); }
+@keyframes tendina { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+#menu button { display: flex; align-items: center; width: 100%; height: 34px; padding: 0 12px 0 8px; gap: 14px;
+  border-radius: 6px; font-weight: 400; font-size: 13.3px; color: var(--c-testo); text-align: left; white-space: nowrap; }
+#menu button i { color: var(--c-accento); width: 14px; font-size: 12px; text-align: center; }
+#menu button:hover { background: var(--c-fondo_acc); }
+#menu.scelte { max-height: 412px; overflow-y: auto; overflow-x: hidden; }
+#menu.scelte::-webkit-scrollbar { width: 6px; }
+#menu.scelte::-webkit-scrollbar-thumb { background: var(--c-scorri); border-radius: 3px; }
+#menu.scelte::-webkit-scrollbar-track { background: transparent; }
+#menu.scelte button { height: auto; min-height: 34px; padding: 4px 12px 4px 8px; }
+#menu.scelte button.scelta span { color: var(--c-accento); font-weight: 600; }
+#menu button .due { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+#menu button .due small { font-weight: 400; font-size: 11.3px; color: var(--c-tenue); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; }
+#menu button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+#menu button.scelta .due small { color: var(--c-tenue); font-weight: 400; }
+/* la casella della scelta multipla: vuota col filo tenue, la spunta azzurra quando e' scelta */
+.m-casella { width: 14px; height: 14px; border-radius: 3px; flex: none; display: grid; place-items: center;
+  border: 1px solid var(--c-tenue); background: transparent; }
+.m-casella i { width: auto !important; color: var(--c-accento) !important; font-size: 10px !important; opacity: 0; }
+.m-casella.si { border-color: transparent; }
+.m-casella.si i { opacity: 1; }
+
+/* ================================================================ 24. dialoghi (le finestre di messaggio di ARES) */
+/* il velo (absolute, MAI fixed); il riquadro raggio 18 col filo, sfumato dal bianco; l'icona Segoe Fluent 29 colorata
+   SENZA tessera; titolo 15; testo 13,3 (10 pt); pulsanti alti 40 (raggio 20) larghi almeno 120: blu LASIT il principale
+   (piu' chiaro sotto il mouse), #E6EEF8 col testo blu LASIT gli altri, cremisi quello che spedisce o spende */
+#velo { position: absolute; inset: 0; z-index: 200; background: rgba(16, 58, 114, 0.16); display: grid; place-items: center;
+  animation: compare var(--t-dialogo) ease backwards; }
+@keyframes compare { from { opacity: 0; } to { opacity: 1; } }
+#dialogo { width: 520px; border-radius: 18px; background: linear-gradient(180deg, #FFFFFF 0%, #F4F9FE 100%);
+  border: 1px solid var(--c-bordo); box-shadow: 0 18px 50px rgba(16, 58, 114, 0.25); padding: 22px 24px 20px;
+  animation: dialogo var(--t-dialogo) var(--e-out) backwards; }
+@keyframes dialogo { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+#dialogo.largo { width: 640px; }
+#dialogo .d-testa { display: flex; align-items: flex-start; gap: 16px; }
+#dialogo .d-icona { width: 30px; height: 30px; border-radius: 0; display: grid; place-items: center; flex: none;
+  background: none !important; box-shadow: none !important; font-size: 29px; }
+#dialogo .d-icona.l-acc, #dialogo .d-icona.l-ok { color: var(--c-accento); }
+#dialogo .d-icona.l-ko { color: #E5484D; }
+#dialogo .d-icona.l-warn { color: #E0A800; }
+#dialogo h3 { font-weight: 600; font-size: 15px; line-height: 22px; margin-top: 4px; }
+#dialogo p { margin: 10px 0 0 46px; font-size: 13.3px; line-height: 1.45; color: var(--c-testo); white-space: pre-line; }
+#dialogo .campo-d { margin: 14px 0 0 46px; }
+#dialogo .campo-d input { font-size: 14.7px; }
+#dialogo .d-scelte { margin: 14px 0 0 46px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#dialogo .d-scelte .pul { justify-content: flex-start; }
+#dialogo .d-pulsanti { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+#dialogo .d-pulsanti .pul { min-width: 120px; height: 40px; border-radius: 20px; font-size: 13px; }
+#dialogo .d-pulsanti .pul:not(.principale):not(.critico) { background: var(--c-pillola); border-color: transparent; color: var(--c-btn_testo); }
+#dialogo .d-pulsanti .pul:not(.principale):not(.critico):hover { background: var(--c-btn_su); }
+#dialogo .d-pulsanti .pul.principale:hover { background: var(--c-go_su); }
+/* piu' campi con l'etichetta: etichetta 13,3 semigrassetto, campo bianco */
+#dialogo .d-campi { margin: 14px 0 0 46px; display: flex; flex-direction: column; gap: 4px; }
+#dialogo .d-campi label.et { font-weight: 600; font-size: 13.3px; color: var(--c-testo); margin-top: 12px; }
+#dialogo .d-campi .campo-d { margin: 0; }
+/* la conferma critica (spedisce email o spende crediti): domanda 20 (15 pt), testo 13,3 tenue, la riga rossa piena;
+   Esc = no, Invio NON conferma */
+#dialogo .d-rossa { margin: 14px 0 0 46px; padding: 8px 12px; border-radius: 0; background: var(--c-fondo_ko);
+  color: var(--c-ko); font-weight: 600; font-size: 13.3px; box-shadow: none; }
+#dialogo .d-finestra { font-size: 12px; color: var(--c-tenue); margin-top: 2px; }
+#dialogo.critico h3 { font-size: 20px; line-height: 26px; margin-top: 2px; }
+#dialogo.critico p { color: var(--c-tenue); }
+
+/* ================================================================ 25. fogli (finestre secondarie DENTRO la pagina) */
+/* absolute, MAI fixed (un elemento fixed va su uno strato a parte e tutto quello che ci sta sopra diventa grigio).
+   Il foglio di ARES (la finestra di lettura del Tk): lo sfondo sfumato della pagina, dentro pannelli di vetro;
+   compare salendo di 10 px (160 ms), sparisce sfumando (120 ms) */
+#velo-fogli { position: absolute; inset: 0; z-index: 80; background: rgba(16, 58, 114, 0.18); }
+#fogli { position: absolute; inset: 0; z-index: 90; pointer-events: none; }
+.foglio { position: absolute; pointer-events: auto; border-radius: 26px; overflow: hidden;
+  box-shadow: 0 24px 60px rgba(16, 58, 114, 0.28), 0 2px 6px rgba(16, 58, 114, 0.10); border: 1px solid #5F87B552; }
+.foglio.semplice { background: var(--sfondo); padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.f-pannello { position: relative; border-radius: 24px; background: var(--vetro); border: 1px solid #5F87B552;
+  box-shadow: var(--ombra), inset 0 1px 0 #FFFFFFE6; padding: 16px; flex: none; }
+.f-pannello.conv { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 6px 16px 16px; }
+.f-testa { display: flex; align-items: flex-start; gap: 14px; }
+.f-testa .testi { flex: 1; min-width: 0; }
+.f-titolo { font-weight: 600; font-size: 17px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.f-sotto { font-size: 11px; line-height: 15px; color: var(--c-tenue); margin-top: 4px; }
+.f-esito { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 11px; color: var(--c-tenue); }
+.f-sintesi { margin-top: 14px; padding: 13px 16px; border-radius: 14px; background: var(--c-fondo_acc);
+  border: 1px solid var(--c-bordo_opaco); font-size: 11.5px; line-height: 16.5px; }
+.f-sintesi .et { display: block; font-weight: 600; font-size: 8.5px; letter-spacing: 0.8px; color: var(--c-tenue);
+  text-transform: uppercase; margin-bottom: 7px; }
+.f-comandi { display: flex; gap: 8px; align-items: center; margin-top: 14px; }
+.f-comandi .pul { height: 36px; font-size: 11px; }
+.f-comandi .destra-c { margin-left: auto; }
+.f-conv { flex: 1; min-height: 0; overflow-y: auto; padding-right: 10px; }
+.f-conv::-webkit-scrollbar { width: 10px; }
+.f-conv::-webkit-scrollbar-track { background: var(--c-scorri_traccia); border-radius: 5px; }
+.f-conv::-webkit-scrollbar-thumb { background: var(--c-scorri); border-radius: 5px; border: 2px solid var(--c-scorri_traccia); }
+.f-occhiello { font-weight: 600; font-size: 9px; letter-spacing: 1px; color: var(--c-tenue); margin-bottom: 11px; text-transform: uppercase; }
+/* i messaggi di una conversazione: raggio 16, margine 16; il nostro azzurrino (testata in accento) rientrato a
+   destra; quello aperto col fondo del suo esito, il bordo del colore e la barretta; gli altri bianchi */
+.messaggio { position: relative; border-radius: 16px; background: #FFFFFF; border: 1px solid var(--c-bordo_opaco); padding: 16px;
+  margin-bottom: 12px; }
+.messaggio.noi { background: var(--c-fondo_acc); margin-left: 56px; }
+.messaggio.loro.rientro { margin-right: 56px; }
+.messaggio.questa { background: var(--fondo-l, #FFFFFF); border-color: color-mix(in srgb, currentColor 40%, transparent); }
+.messaggio.questa::before { content: ""; position: absolute; left: 5px; top: 12px; bottom: 12px; width: 4px; border-radius: 2px;
+  background: currentColor; }
+.messaggio .mt { display: flex; gap: 10px; align-items: center; font-weight: 600; font-size: 10px; }
+.messaggio .mt > span:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.messaggio .mt .sigla { flex: none; }
+.messaggio .mo { margin-top: 10px; font-weight: 600; font-size: 11.5px; line-height: 16px; color: var(--c-testo); }
+.messaggio .mx { margin-top: 6px; font-size: 11.5px; line-height: 17px; color: var(--c-testo); white-space: pre-wrap;
+  word-break: break-word; }
+.f-calce { margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--c-bordo); font-size: 10.5px; line-height: 1.5; color: var(--c-tenue); }
+.f-calce .f-occhiello { margin-bottom: 8px; }
+
+/* ================================================================ 26. caricamento iniziale */
+/* il simbolo disegnato in una tela (la A di ARES con la busta che gira), FUORI dal palco (il palco resta nascosto
+   finche' le letture non sono finite), e la barretta alta 6 che non sta mai ferma */
+#caricamento { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; }
+#caricamento .car-dentro { width: 300px; height: 250px; position: relative; }
+#caricamento canvas { position: absolute; left: 0; top: 0; width: 300px; height: 200px; }
+#caricamento .barra { position: absolute; left: 75px; top: 184px; width: 150px; height: 6px; border-radius: 3px; }
+#caricamento .barra .pieno { transition: none; background: var(--c-accento); }
+body.pronto #caricamento.via { visibility: hidden; }
+
+/* ================================================================ 27. dissolvenze (vedi ares_glass.js) */
+.dissolvibile { overflow: visible; }
+.strato { position: absolute; inset: 0; }
+.uscente { pointer-events: none; z-index: 5; }
+
+/* ================================================================ 28. animazioni spente (regola del programma) */
+/* Si spengono SOLO se il programma lo dice (animazioni_attive: effetti di Windows spenti, MAI per il Desktop remoto):
+   il browser da solo, con prefers-reduced-motion, le spegnerebbe sempre in Desktop remoto. */
+body.senza-animazioni *, body.senza-animazioni *::before, body.senza-animazioni *::after {
+  animation-duration: 1ms !important; transition-duration: 1ms !important; }

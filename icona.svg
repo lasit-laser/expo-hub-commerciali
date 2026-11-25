@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Expo Hub: lo stand ad angolo appoggiato su un pavimento a piastrelle (scelta dell'utente 2026-11-25, proposta 2).
+       Ingrandito al 112%, abbassato di 16 px rispetto al centro dell'ingombro (utente: "abbassalo ancora leggermente"). -->
+  <rect width="512" height="512" rx="112" fill="#103A72"/>
+  <g transform="translate(256 256) scale(1.12) translate(-256 -255)">
+    <path d="M256 300 L446 360 L256 420 L66 360 Z" fill="#2E6BB0"/>
+    <g stroke="#5E95D1" stroke-width="5" fill="none"><path d="M161 330 L351 390"/><path d="M161 390 L351 330"/></g>
+    <path d="M256 300 L446 360 L256 420 L66 360 Z" fill="none" stroke="#7FB2E5" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M152 214 L240 166 L240 352 L152 326 Z" fill="#00A3E0"/>
+    <g fill="none" stroke="#FFFFFF" stroke-width="25" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M128 200 L256 128 L384 200 L384 344 L256 384 L128 344 Z"/>
+      <path d="M256 128 L256 384"/>
+    </g>
+  </g>
+</svg>
