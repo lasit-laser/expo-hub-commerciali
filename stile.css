@@ -139,6 +139,11 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 .eh-eventi { display: flex; flex-direction: column; gap: 12px; max-height: 420px; overflow-y: auto; overflow-x: hidden; padding-right: 4px; }
 .eh-evento { display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; align-items: start; }
 .eh-evento .avatar { background: var(--c-fondo_acc); color: var(--c-accento); border: 1px solid #0077B630; }
+.eh-pallino { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; flex: none;
+  background: var(--c-ko); color: #FFFFFF; font-size: 10.5px; font-weight: 700; line-height: 1; }
+.eh-evento.nuovo .cosa { box-shadow: 0 0 0 1px color-mix(in srgb, var(--c-ko) 45%, transparent); border-radius: 12px; }
+.eh-evento.nuovo:not(.commento) .cosa { padding: 4px 8px; background: color-mix(in srgb, var(--c-ko) 8%, transparent); }
+.eh-evento.nuovo.commento .cosa { background: var(--c-fondo_ko); }
 .eh-evento.marketing .avatar { background: var(--c-blu_lasit); color: #FFFFFF; border-color: transparent; }
 .eh-evento .chi { font-size: 10.5px; line-height: 14px; color: var(--c-tenue); padding-top: 1px; }
 .eh-evento .chi b { font-weight: 600; color: var(--c-testo); margin-right: 6px; }

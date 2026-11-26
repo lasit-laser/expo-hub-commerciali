@@ -122,7 +122,7 @@ function disegnaElenco() {
     const manca = (x.manca || []).map((m) => sigla({ l: "warn", t: t("manca_" + m) })).join("");
     return `<article class="scheda eh-carta" data-apri="${esc(x.id)}">
       ${testa({ icona: "fiera", titolo: [x.fiera, x.edizione].filter(Boolean).join(" "),
-        destra: pillolaStato(x.stato) + `<button class="eh-elimina" data-elimina="${esc(x.id)}" title="${esc(t("elimina"))}">${ic("cestino")}</button>` })}
+        destra: pallinoNovita(novitaDi(x.id, (ST.dettagli[x.id] || {}).eventi)) + pillolaStato(x.stato) + `<button class="eh-elimina" data-elimina="${esc(x.id)}" title="${esc(t("elimina"))}">${ic("cestino")}</button>` })}
       <div class="corpo">
         <div class="eh-riga">${ic("calendario")}<span>${esc([periodo(x.inizio, x.fine), luogo].filter(Boolean).join(" · ") || "—")}</span></div>
         <div class="eh-riga">${ic("stand")}<span>${esc([x.padiglione, x.stand].filter(Boolean).join(" · ") || "—")}</span></div>
@@ -187,6 +187,36 @@ function materialeHTML(m) {
 // lavorazione; i file di una consegna stanno già nella voce della versione.
 const inCronologia = (e) => e.tipo !== "stato" && !(e.tipo === "file" && e.categoria === "consegna")
   && !(e.tipo === "commento" && String(e.testo || "").trim() === "");
+// NOVITÀ dal marketing (utente 2026-11-26): commenti e versioni nuove arrivati dopo l'ultima volta che il commerciale
+// ha aperto quella fiera SU QUESTO DISPOSITIVO (localStorage: id fiera -> `quando` dell'ultimo evento visto). Pillola
+// rossa nella card "Cronologia e commenti" e sulla carta della fiera; sparisce quando la fiera è stata aperta.
+// La prima volta su un dispositivo tutto ciò che c'è già conta come visto (niente pillole su fiere vecchie).
+const VISTI_LS = "expohub_visti";
+function visti() { try { return JSON.parse(localStorage.getItem(VISTI_LS) || "null"); } catch (e) { return null; } }
+function salvaVisti(v) { try { localStorage.setItem(VISTI_LS, JSON.stringify(v)); } catch (e) { /* solo comodità */ } }
+const daMarketing = (e) => (e.chi === "marketing" || e.chi === "Marketing") && (e.tipo === "commento" || e.tipo === "versione") && inCronologia(e);
+const ultimoEvento = (eventi) => (eventi || []).reduce((m, e) => (String(e.quando) > m ? String(e.quando) : m), "");
+function inizializzaVisti() {
+  if (visti()) return;
+  const v = {};
+  Object.entries(ST.dettagli || {}).forEach(([id, d]) => { v[id] = ultimoEvento(d.eventi); });
+  salvaVisti(v);
+}
+function novitaDi(id, eventi, dopo = null) {
+  const da = dopo !== null ? dopo : ((visti() || {})[id] || "");
+  return (eventi || []).filter((e) => daMarketing(e) && String(e.quando) > da);
+}
+function segnaVisto(id, eventi) { const v = visti() || {}; const u = ultimoEvento(eventi); if (u > (v[id] || "")) { v[id] = u; salvaVisti(v); } }
+function pillolaNovita(nuovi) {
+  if (!nuovi.length) return "";
+  const soloCommenti = nuovi.every((e) => e.tipo === "commento");
+  return sigla({ l: "ko", t: t(soloCommenti ? "nuovi_commenti" : "novita_n", { n: nuovi.length }) });
+}
+// sulla carta dell'elenco: solo un pallino rosso col numero, per non tagliare il nome della fiera
+function pallinoNovita(nuovi) {
+  return nuovi.length ? `<span class="eh-pallino" title="${esc(pillolaTesto(nuovi))}">${nuovi.length}</span>` : "";
+}
+function pillolaTesto(nuovi) { return t(nuovi.every((e) => e.tipo === "commento") ? "nuovi_commenti" : "novita_n", { n: nuovi.length }); }
 // le versioni che il marketing ha consegnato per un materiale (dalla cronologia), con la risposta del commerciale
 function versioniDi(materiale) {
   return ST.eventi.filter((e) => e.tipo === "versione" && e.materiale === materiale).map((e) => {
@@ -397,6 +427,7 @@ function aggiornaLato() {
       ${nuova ? "" : `<div class="eh-salvato${sporco ? " da-salvare" : ""}">${esc(sporco ? t("non_salvate") : t("salvate"))}</div>`}
     </div>`);
   const nomeMat = (id) => { const m = d.materiali.find((x) => x.id === id); return m ? t("tipo_" + m.tipo) : ""; };
+  const nuovi = nuova ? [] : novitaDi(r.id, ST.eventi, ST.vistoPrima || ""), idNuovi = new Set(nuovi.map((e) => e.id));
   const eventi = ST.eventi.filter(inCronologia).slice().reverse().map((e) => {
     const marketing = e.chi === "marketing" || e.chi === "Marketing";
     const cosa = e.tipo === "creata" ? t("ev_creata") : e.tipo === "aggiornata" ? t("ev_aggiornata", { cosa: String(e.testo || "").split(", ").map((k) => t("k_" + k)).join(", ") })
@@ -404,11 +435,11 @@ function aggiornaLato() {
       : e.tipo === "versione" ? t("ev_versione", { n: e.versione, mat: nomeMat(e.materiale) }) + (e.testo ? `\n${e.testo}` : "")
       : e.tipo === "revisione" ? t(e.esito === "approvata" ? "ev_rev_ok" : "ev_rev_mod", { n: e.versione, mat: nomeMat(e.materiale) }) + (e.testo ? `\n${e.testo}` : "")
       : e.testo;
-    return `<div class="eh-evento ${e.tipo}${marketing ? " marketing" : ""}"><span class="avatar piccolo">${esc(marketing ? "M" : iniziali(e.chi))}</span>
+    return `<div class="eh-evento ${e.tipo}${marketing ? " marketing" : ""}${idNuovi.has(e.id) ? " nuovo" : ""}"><span class="avatar piccolo">${esc(marketing ? "M" : iniziali(e.chi))}</span>
       <div><div class="chi"><b>${esc(marketing ? t("marketing") : e.chi)}</b>${esc(data(e.quando, true))}</div><div class="cosa">${esc(cosa)}</div></div></div>`;
   }).join("");
   const bozzaCommento = $("#commento") ? $("#commento").value : "";
-  morph($("#pannello-cronologia"), `${testa({ icona: "commento", titolo: t("sez_cronologia") })}
+  morph($("#pannello-cronologia"), `${testa({ icona: "commento", titolo: t("sez_cronologia"), destra: pillolaNovita(nuovi) })}
     <div class="corpo">${nuova ? `<div class="quieto">${esc(t("commento_dopo"))}</div>` : `<div class="eh-eventi">${eventi}</div>
       <div class="eh-commento"><span class="campo eh-area"><textarea id="commento" placeholder="${esc(t("commento_segnaposto"))}">${esc(bozzaCommento)}</textarea></span>
       <button class="pul medio" id="b-commento">${ic("commento")}<span>${esc(t("commento_invia"))}</span></button></div>`}</div>`);
@@ -430,6 +461,8 @@ async function apriRichiesta(id) {
       const pronto = ST.dettagli && ST.dettagli[id];
       const j = pronto ? JSON.parse(JSON.stringify(pronto)) : await chiama("leggi", { id });
       ST.richiesta = j.richiesta; ST.eventi = j.eventi;
+      ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate finché la fiera è aperta
+      segnaVisto(id, ST.eventi);
     } else { ST.richiesta = { id: null, stato: "inviata", dati: vuota() }; ST.eventi = []; }
     ST.caricamenti = [];
     const dati = Object.assign(vuota(), ST.richiesta.dati);
@@ -466,7 +499,7 @@ async function tornaElenco() {
   aggiornaElenco();
 }
 async function aggiornaElenco() {
-  try { ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; disegnaElenco(); disegnaBarra(); } catch (e) { /* resta quello di prima */ }
+  try { ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; inizializzaVisti(); disegnaElenco(); disegnaBarra(); } catch (e) { /* resta quello di prima */ }
 }
 // Ogni 20 s (e quando si torna sulla pagina): "è cambiato qualcosa?" con una chiamata leggerissima; se sì si rileggono
 // l'elenco e la richiesta aperta (stato, cronologia, versioni). Il modulo che si sta scrivendo NON si tocca.
@@ -482,6 +515,7 @@ async function controllaNovita() {
         const j = (ST.dettagli && ST.dettagli[ST.richiesta.id]) || await chiama("leggi", { id: ST.richiesta.id });
         if (ST.richiesta && ST.richiesta.id === j.richiesta.id) {
           ST.eventi = j.eventi; ST.richiesta.stato = j.richiesta.stato; ST.richiesta.aggiornata = j.richiesta.aggiornata;
+          segnaVisto(ST.richiesta.id, ST.eventi);     // arrivate mentre la si guarda: segnate ora, viste all'uscita
           aggiornaFile();
         }
       }
@@ -626,7 +660,7 @@ async function entraConLink() {
     try { ST.io = await chiama("io", { completo: true }); }
     catch (e) { ST.chiave = prima; if (e.codice === "accesso") { errore.hidden = false; return; } throw e; }
     try { localStorage.setItem(CHIAVE_LS, m[1]); } catch (e) { /* resta per questa volta */ }
-    ST.dettagli = ST.io.dettagli || {};
+    ST.dettagli = ST.io.dettagli || {}; inizializzaVisti();
     if (LINGUE[ST.io.commerciale.lingua] && !localStorage.getItem(LINGUA_LS)) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
     ST.pagina = "elenco";
     $("#p-accesso").classList.add("nascosta");
@@ -659,7 +693,7 @@ async function avvio() {
   disegnaBarra();
   if (!ST.chiave) { mostraAccesso(); return pronto(); }
   try {
-    ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {};
+    ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; inizializzaVisti();
     if (!salvata && LINGUE[ST.io.commerciale.lingua]) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
     disegnaBarra();
     disegnaElenco();
