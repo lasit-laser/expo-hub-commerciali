@@ -121,7 +121,8 @@ function disegnaElenco() {
     const luogo = [x.citta, x.paese].filter(Boolean).join(", ");
     const manca = (x.manca || []).map((m) => sigla({ l: "warn", t: t("manca_" + m) })).join("");
     return `<article class="scheda eh-carta" data-apri="${esc(x.id)}">
-      ${testa({ icona: "fiera", titolo: [x.fiera, x.edizione].filter(Boolean).join(" "), destra: pillolaStato(x.stato) })}
+      ${testa({ icona: "fiera", titolo: [x.fiera, x.edizione].filter(Boolean).join(" "),
+        destra: pillolaStato(x.stato) + `<button class="eh-elimina" data-elimina="${esc(x.id)}" title="${esc(t("elimina"))}">${ic("cestino")}</button>` })}
       <div class="corpo">
         <div class="eh-riga">${ic("calendario")}<span>${esc([periodo(x.inizio, x.fine), luogo].filter(Boolean).join(" · ") || "—")}</span></div>
         <div class="eh-riga">${ic("stand")}<span>${esc([x.padiglione, x.stand].filter(Boolean).join(" · ") || "—")}</span></div>
@@ -441,6 +442,19 @@ async function apriRichiesta(id) {
     else cambiaPagina($("#p-elenco"), $("#p-richiesta"), () => ST.pagina === "richiesta");
   } catch (e) { avvisaErrore(e); }
 }
+// Il commerciale elimina una sua fiera (utente 2026-11-26): dopo la conferma sparisce SUBITO dall'elenco e il motore la
+// toglie anche dal pannello del marketing. Se il motore dice di no, la fiera torna al suo posto con l'errore.
+async function eliminaFiera(id) {
+  const x = ((ST.io && ST.io.richieste) || []).find((r) => r.id === id);
+  if (!x) return;
+  const nome = [x.fiera, x.edizione].filter(Boolean).join(" ");
+  if (!await domanda(t("elimina_titolo"), t("elimina_testo", { nome }), t("elimina_si"))) return;
+  const prima = ST.io.richieste;
+  ST.io.richieste = prima.filter((r) => r.id !== id);
+  disegnaElenco(); disegnaBarra();
+  try { await chiama("elimina", { id }); if (ST.dettagli) delete ST.dettagli[id]; }
+  catch (e) { ST.io.richieste = prima; disegnaElenco(); disegnaBarra(); avvisaErrore(e); }
+}
 async function tornaElenco() {
   if (daSalvare()) {
     const via = await domanda(t("esci_titolo"), t("esci_domanda"), t("esci_si"));
@@ -524,6 +538,7 @@ function lega() {
     if (tm) { const i = scegliInterruttore(tm.closest("[data-int]"), tm); if (i !== null) scegliTema(i === 1); return; }
     const fl = el.closest("#p-elenco [data-filtro]"); if (fl) { ST.filtro = fl.dataset.filtro || null; disegnaElenco(); return; }
     if (el.closest("#b-nuova") || el.closest("[data-nuova]")) { apriRichiesta(null); return; }
+    const el_ = el.closest("[data-elimina]"); if (el_) { eliminaFiera(el_.dataset.elimina); return; }
     const carta = el.closest("[data-apri]"); if (carta) { apriRichiesta(carta.dataset.apri); return; }
     if (el.closest("#b-indietro")) { tornaElenco(); return; }
     if (el.closest("#b-salva")) { salva(); return; }

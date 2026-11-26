@@ -2,7 +2,8 @@
 // (quelle che mancano si prendono dall'inglese). {x} = valore inserito. Traduzioni da far rileggere a un madrelingua.
 "use strict";
 const LINGUE = {
-  it: { _nome: "Italiano", filtro_tutte: "Tutte", filtro_nessuna: "Nessuna fiera con questo filtro.", tema_chiaro: "Tema chiaro", tema_scuro: "Tema scuro",
+  it: { _nome: "Italiano", elimina: "Elimina fiera", elimina_titolo: "Eliminare la fiera?", elimina_testo: "«{nome}» sparirà dalle tue fiere e anche dall'elenco del marketing.", elimina_si: "Elimina",
+    filtro_tutte: "Tutte", filtro_nessuna: "Nessuna fiera con questo filtro.", tema_chiaro: "Tema chiaro", tema_scuro: "Tema scuro",
     occhiello_elenco: "Expo Hub · richieste al marketing", titolo_elenco: "Le mie fiere",
     frase_elenco: "Per ogni fiera chiedi al marketing i file per lo stand e gli altri materiali. La richiesta si può completare anche più tardi.",
     nuova_richiesta: "Nuova richiesta", tondo_in_corso: "in corso", tondo_da_completare: "da completare", tondo_consegnate: "consegnate",
@@ -60,7 +61,8 @@ const LINGUE = {
     da_rivedere_n: "{n} da rivedere",
     lingua: "Lingua", annulla: "Annulla" },
 
-  en: { _nome: "English", filtro_tutte: "All", filtro_nessuna: "No fairs with this filter.", tema_chiaro: "Light theme", tema_scuro: "Dark theme",
+  en: { _nome: "English", elimina: "Delete fair", elimina_titolo: "Delete this fair?", elimina_testo: "\"{nome}\" will disappear from your fairs and from the marketing team's list too.", elimina_si: "Delete",
+    filtro_tutte: "All", filtro_nessuna: "No fairs with this filter.", tema_chiaro: "Light theme", tema_scuro: "Dark theme",
     occhiello_elenco: "Expo Hub · requests to marketing", titolo_elenco: "My trade fairs",
     frase_elenco: "For each fair, ask marketing for the stand files and other materials. You can complete a request later.",
     nuova_richiesta: "New request", tondo_in_corso: "in progress", tondo_da_completare: "to complete", tondo_consegnate: "delivered",
@@ -118,7 +120,8 @@ const LINGUE = {
     da_rivedere_n: "{n} to review",
     lingua: "Language", annulla: "Cancel" },
 
-  fr: { _nome: "Français", filtro_tutte: "Toutes", filtro_nessuna: "Aucun salon avec ce filtre.", tema_chiaro: "Thème clair", tema_scuro: "Thème sombre",
+  fr: { _nome: "Français", elimina: "Supprimer le salon", elimina_titolo: "Supprimer ce salon ?", elimina_testo: "« {nome} » disparaîtra de vos salons et aussi de la liste du marketing.", elimina_si: "Supprimer",
+    filtro_tutte: "Toutes", filtro_nessuna: "Aucun salon avec ce filtre.", tema_chiaro: "Thème clair", tema_scuro: "Thème sombre",
     occhiello_elenco: "Expo Hub · demandes au marketing", titolo_elenco: "Mes salons",
     frase_elenco: "Pour chaque salon, demandez au marketing les fichiers du stand et les autres supports. La demande peut être complétée plus tard.",
     nuova_richiesta: "Nouvelle demande", tondo_in_corso: "en cours", tondo_da_completare: "à compléter", tondo_consegnate: "livrées",
@@ -176,7 +179,8 @@ const LINGUE = {
     da_rivedere_n: "{n} à valider",
     lingua: "Langue", annulla: "Annuler" },
 
-  de: { _nome: "Deutsch", filtro_tutte: "Alle", filtro_nessuna: "Keine Messen mit diesem Filter.", tema_chiaro: "Helles Design", tema_scuro: "Dunkles Design",
+  de: { _nome: "Deutsch", elimina: "Messe löschen", elimina_titolo: "Diese Messe löschen?", elimina_testo: "„{nome}\" verschwindet aus Ihren Messen und auch aus der Liste des Marketings.", elimina_si: "Löschen",
+    filtro_tutte: "Alle", filtro_nessuna: "Keine Messen mit diesem Filter.", tema_chiaro: "Helles Design", tema_scuro: "Dunkles Design",
     occhiello_elenco: "Expo Hub · Anfragen an das Marketing", titolo_elenco: "Meine Messen",
     frase_elenco: "Fordern Sie für jede Messe beim Marketing die Standdateien und weitere Materialien an. Die Anfrage kann später ergänzt werden.",
     nuova_richiesta: "Neue Anfrage", tondo_in_corso: "in Arbeit", tondo_da_completare: "zu ergänzen", tondo_consegnate: "geliefert",
@@ -234,7 +238,8 @@ const LINGUE = {
     da_rivedere_n: "{n} zu prüfen",
     lingua: "Sprache", annulla: "Abbrechen" },
 
-  es: { _nome: "Español", filtro_tutte: "Todas", filtro_nessuna: "Ninguna feria con este filtro.", tema_chiaro: "Tema claro", tema_scuro: "Tema oscuro",
+  es: { _nome: "Español", elimina: "Eliminar feria", elimina_titolo: "¿Eliminar esta feria?", elimina_testo: "«{nome}» desaparecerá de tus ferias y también de la lista de marketing.", elimina_si: "Eliminar",
+    filtro_tutte: "Todas", filtro_nessuna: "Ninguna feria con este filtro.", tema_chiaro: "Tema claro", tema_scuro: "Tema oscuro",
     occhiello_elenco: "Expo Hub · solicitudes a marketing", titolo_elenco: "Mis ferias",
     frase_elenco: "Para cada feria, pide a marketing los archivos del stand y los demás materiales. La solicitud se puede completar más tarde.",
     nuova_richiesta: "Nueva solicitud", tondo_in_corso: "en curso", tondo_da_completare: "por completar", tondo_consegnate: "entregadas",
@@ -292,7 +297,8 @@ const LINGUE = {
     da_rivedere_n: "{n} por revisar",
     lingua: "Idioma", annulla: "Cancelar" },
 
-  pl: { _nome: "Polski", filtro_tutte: "Wszystkie", filtro_nessuna: "Brak targów z tym filtrem.", tema_chiaro: "Jasny motyw", tema_scuro: "Ciemny motyw",
+  pl: { _nome: "Polski", elimina: "Usuń targi", elimina_titolo: "Usunąć te targi?", elimina_testo: "„{nome}\" zniknie z Twoich targów i z listy działu marketingu.", elimina_si: "Usuń",
+    filtro_tutte: "Wszystkie", filtro_nessuna: "Brak targów z tym filtrem.", tema_chiaro: "Jasny motyw", tema_scuro: "Ciemny motyw",
     occhiello_elenco: "Expo Hub · zamówienia do marketingu", titolo_elenco: "Moje targi",
     frase_elenco: "Dla każdych targów zamów w marketingu pliki stoiska i inne materiały. Zamówienie można uzupełnić później.",
     nuova_richiesta: "Nowe zamówienie", tondo_in_corso: "w toku", tondo_da_completare: "do uzupełnienia", tondo_consegnate: "dostarczone",
