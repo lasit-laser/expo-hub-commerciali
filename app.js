@@ -533,14 +533,14 @@ async function controllaNovita() {
   } catch (e) { /* si riprova al giro dopo */ }
   finally { _controllo = false; }
 }
-// un controllo ogni 3 s con la pagina davanti, ogni 15 s quando è dietro altre finestre o ridotta a icona (prima si
+// un controllo ogni 2 s con la pagina davanti, ogni 15 s quando è dietro altre finestre o ridotta a icona (prima si
 // fermava: le novità comparivano solo riaprendo l'app); tornandoci, un controllo subito
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 (async function giroLive() {
   for (;;) {
     const inizio = Date.now();
     await controllaNovita();
-    await pausa(Math.max(500, (document.hidden ? 15000 : 3000) - (Date.now() - inizio)));
+    await pausa(Math.max(500, (document.hidden ? 15000 : 2000) - (Date.now() - inizio)));
   }
 })();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) controllaNovita(); });
