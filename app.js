@@ -594,9 +594,14 @@ let _presto = null;
 function aggiornaLatoPresto() { clearTimeout(_presto); _presto = setTimeout(aggiornaLato, 120); }
 
 /* ---------------------------------------------------------------------------------------- accesso e avvio */
+// Due casi diversi (utente 2026-11-26): senza chiave su questo dispositivo (pagina aperta dall'indirizzo nudo, es. dal
+// pulsante della mail) NON è un link sbagliato: si spiega di aprire il link personale una volta. "Link non valido" solo
+// quando il motore rifiuta la chiave (link vecchio o disattivato).
 function disegnaAccesso() {
-  setHTML($("#p-accesso"), `<div class="eh-contenuto"><section class="scheda eh-accesso">${testa({ icona: "avviso", titolo: t("err_accesso_titolo") })}
-    <div class="corpo"><div class="avviso l-warn"><b>${esc(t("err_accesso_titolo"))}</b><div class="testo">${esc(t("err_accesso"))}</div></div></div></section></div>`);
+  const senza = !ST.chiave;
+  const titolo = t(senza ? "accesso_titolo" : "err_accesso_titolo"), testo = t(senza ? "accesso_testo" : "err_accesso");
+  setHTML($("#p-accesso"), `<div class="eh-contenuto"><section class="scheda eh-accesso">${testa({ icona: senza ? "utente" : "avviso", titolo })}
+    <div class="corpo"><div class="avviso ${senza ? "l-acc" : "l-warn"}"><b>${esc(titolo)}</b><div class="testo">${esc(testo)}</div></div></div></section></div>`);
 }
 function mostraAccesso() {
   ST.pagina = "accesso";
