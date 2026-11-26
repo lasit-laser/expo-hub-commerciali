@@ -2,7 +2,8 @@
 // (quelle che mancano si prendono dall'inglese). {x} = valore inserito. Traduzioni da far rileggere a un madrelingua.
 "use strict";
 const LINGUE = {
-  it: { _nome: "Italiano", accesso_titolo: "Apri il tuo link personale", accesso_testo: "Per entrare in Expo Hub apri il link personale che ti ha mandato il marketing LASIT. Basta una volta: poi su questo dispositivo la pagina ti riconosce da sola.",
+  it: { _nome: "Italiano", accesso_campo: "Il tuo link personale", accesso_entra: "Entra", accesso_non_valido: "Questo link non funziona. Controlla di averlo copiato tutto, oppure chiedine uno nuovo al marketing.",
+    accesso_titolo: "Apri il tuo link personale", accesso_testo: "Per entrare in Expo Hub apri il link personale che ti ha mandato il marketing LASIT, oppure incollalo qui sotto. Basta una volta: poi su questo dispositivo la pagina ti riconosce da sola.",
     elimina: "Elimina fiera", elimina_titolo: "Eliminare la fiera?", elimina_testo: "«{nome}» sparirà dalle tue fiere e anche dall'elenco del marketing.", elimina_si: "Elimina",
     filtro_tutte: "Tutte", filtro_nessuna: "Nessuna fiera con questo filtro.", tema_chiaro: "Tema chiaro", tema_scuro: "Tema scuro",
     occhiello_elenco: "Expo Hub · richieste al marketing", titolo_elenco: "Le mie fiere",
@@ -62,7 +63,8 @@ const LINGUE = {
     da_rivedere_n: "{n} da rivedere",
     lingua: "Lingua", annulla: "Annulla" },
 
-  en: { _nome: "English", accesso_titolo: "Open your personal link", accesso_testo: "To enter Expo Hub, open the personal link LASIT marketing sent you. You only need to do it once: after that this device recognises you automatically.",
+  en: { _nome: "English", accesso_campo: "Your personal link", accesso_entra: "Enter", accesso_non_valido: "This link doesn't work. Check that you copied all of it, or ask marketing for a new one.",
+    accesso_titolo: "Open your personal link", accesso_testo: "To enter Expo Hub, open the personal link LASIT marketing sent you, or paste it below. You only need to do it once: after that this device recognises you automatically.",
     elimina: "Delete fair", elimina_titolo: "Delete this fair?", elimina_testo: "\"{nome}\" will disappear from your fairs and from the marketing team's list too.", elimina_si: "Delete",
     filtro_tutte: "All", filtro_nessuna: "No fairs with this filter.", tema_chiaro: "Light theme", tema_scuro: "Dark theme",
     occhiello_elenco: "Expo Hub · requests to marketing", titolo_elenco: "My trade fairs",
@@ -122,7 +124,8 @@ const LINGUE = {
     da_rivedere_n: "{n} to review",
     lingua: "Language", annulla: "Cancel" },
 
-  fr: { _nome: "Français", accesso_titolo: "Ouvrez votre lien personnel", accesso_testo: "Pour entrer dans Expo Hub, ouvrez le lien personnel envoyé par le marketing LASIT. Une seule fois suffit : ensuite cet appareil vous reconnaît automatiquement.",
+  fr: { _nome: "Français", accesso_campo: "Votre lien personnel", accesso_entra: "Entrer", accesso_non_valido: "Ce lien ne fonctionne pas. Vérifiez que vous l'avez copié en entier, ou demandez-en un nouveau au marketing.",
+    accesso_titolo: "Ouvrez votre lien personnel", accesso_testo: "Pour entrer dans Expo Hub, ouvrez le lien personnel envoyé par le marketing LASIT, ou collez-le ci-dessous. Une seule fois suffit : ensuite cet appareil vous reconnaît automatiquement.",
     elimina: "Supprimer le salon", elimina_titolo: "Supprimer ce salon ?", elimina_testo: "« {nome} » disparaîtra de vos salons et aussi de la liste du marketing.", elimina_si: "Supprimer",
     filtro_tutte: "Toutes", filtro_nessuna: "Aucun salon avec ce filtre.", tema_chiaro: "Thème clair", tema_scuro: "Thème sombre",
     occhiello_elenco: "Expo Hub · demandes au marketing", titolo_elenco: "Mes salons",
@@ -182,7 +185,8 @@ const LINGUE = {
     da_rivedere_n: "{n} à valider",
     lingua: "Langue", annulla: "Annuler" },
 
-  de: { _nome: "Deutsch", accesso_titolo: "Öffnen Sie Ihren persönlichen Link", accesso_testo: "Um Expo Hub zu öffnen, verwenden Sie den persönlichen Link vom LASIT-Marketing. Einmal genügt: danach erkennt Sie dieses Gerät automatisch.",
+  de: { _nome: "Deutsch", accesso_campo: "Ihr persönlicher Link", accesso_entra: "Öffnen", accesso_non_valido: "Dieser Link funktioniert nicht. Prüfen Sie, ob Sie ihn vollständig kopiert haben, oder fordern Sie beim Marketing einen neuen an.",
+    accesso_titolo: "Öffnen Sie Ihren persönlichen Link", accesso_testo: "Um Expo Hub zu öffnen, verwenden Sie den persönlichen Link vom LASIT-Marketing oder fügen Sie ihn unten ein. Einmal genügt: danach erkennt Sie dieses Gerät automatisch.",
     elimina: "Messe löschen", elimina_titolo: "Diese Messe löschen?", elimina_testo: "„{nome}\" verschwindet aus Ihren Messen und auch aus der Liste des Marketings.", elimina_si: "Löschen",
     filtro_tutte: "Alle", filtro_nessuna: "Keine Messen mit diesem Filter.", tema_chiaro: "Helles Design", tema_scuro: "Dunkles Design",
     occhiello_elenco: "Expo Hub · Anfragen an das Marketing", titolo_elenco: "Meine Messen",
@@ -242,7 +246,8 @@ const LINGUE = {
     da_rivedere_n: "{n} zu prüfen",
     lingua: "Sprache", annulla: "Abbrechen" },
 
-  es: { _nome: "Español", accesso_titolo: "Abre tu enlace personal", accesso_testo: "Para entrar en Expo Hub abre el enlace personal que te envió marketing de LASIT. Basta una vez: después este dispositivo te reconoce solo.",
+  es: { _nome: "Español", accesso_campo: "Tu enlace personal", accesso_entra: "Entrar", accesso_non_valido: "Este enlace no funciona. Comprueba que lo has copiado entero o pide uno nuevo a marketing.",
+    accesso_titolo: "Abre tu enlace personal", accesso_testo: "Para entrar en Expo Hub abre el enlace personal que te envió marketing de LASIT, o pégalo aquí abajo. Basta una vez: después este dispositivo te reconoce solo.",
     elimina: "Eliminar feria", elimina_titolo: "¿Eliminar esta feria?", elimina_testo: "«{nome}» desaparecerá de tus ferias y también de la lista de marketing.", elimina_si: "Eliminar",
     filtro_tutte: "Todas", filtro_nessuna: "Ninguna feria con este filtro.", tema_chiaro: "Tema claro", tema_scuro: "Tema oscuro",
     occhiello_elenco: "Expo Hub · solicitudes a marketing", titolo_elenco: "Mis ferias",
@@ -302,7 +307,8 @@ const LINGUE = {
     da_rivedere_n: "{n} por revisar",
     lingua: "Idioma", annulla: "Cancelar" },
 
-  pl: { _nome: "Polski", accesso_titolo: "Otwórz swój osobisty link", accesso_testo: "Aby wejść do Expo Hub, otwórz osobisty link od działu marketingu LASIT. Wystarczy raz: potem to urządzenie rozpozna Cię automatycznie.",
+  pl: { _nome: "Polski", accesso_campo: "Twój osobisty link", accesso_entra: "Wejdź", accesso_non_valido: "Ten link nie działa. Sprawdź, czy skopiowano go w całości, lub poproś dział marketingu o nowy.",
+    accesso_titolo: "Otwórz swój osobisty link", accesso_testo: "Aby wejść do Expo Hub, otwórz osobisty link od działu marketingu LASIT lub wklej go poniżej. Wystarczy raz: potem to urządzenie rozpozna Cię automatycznie.",
     elimina: "Usuń targi", elimina_titolo: "Usunąć te targi?", elimina_testo: "„{nome}\" zniknie z Twoich targów i z listy działu marketingu.", elimina_si: "Usuń",
     filtro_tutte: "Wszystkie", filtro_nessuna: "Brak targów z tym filtrem.", tema_chiaro: "Jasny motyw", tema_scuro: "Ciemny motyw",
     occhiello_elenco: "Expo Hub · zamówienia do marketingu", titolo_elenco: "Moje targi",

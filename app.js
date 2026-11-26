@@ -541,6 +541,7 @@ function lega() {
     const el_ = el.closest("[data-elimina]"); if (el_) { eliminaFiera(el_.dataset.elimina); return; }
     const carta = el.closest("[data-apri]"); if (carta) { apriRichiesta(carta.dataset.apri); return; }
     if (el.closest("#b-indietro")) { tornaElenco(); return; }
+    if (el.closest("#b-entra")) { entraConLink(); return; }
     if (el.closest("#b-salva")) { salva(); return; }
     if (el.closest("#b-commento")) { commenta(); return; }
     if (el.closest("#b-scegli")) { _allegaA = null; $("#scelta-file").click(); return; }
@@ -571,7 +572,9 @@ function lega() {
       apriTendina(b, { scelte: ORDINE_LINGUE.map((l) => [l, LINGUE[l]._nome, l === LINGUA]) }, (l) => cambiaLingua(l));
     }
   });
-  document.addEventListener("input", (e) => { if (e.target.closest("#p-richiesta") && e.target.id !== "commento") aggiornaLatoPresto(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "link-personale") entraConLink(); });
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "link-personale") { const er = $("#errore-link"); if (er) er.hidden = true; } if (e.target.closest("#p-richiesta") && e.target.id !== "commento") aggiornaLatoPresto(); });
   $("#scelta-file").addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []); e.target.value = "";
     if (files.length) aggiungiFile(files, _allegaA ? "materiale" : "allestitore", _allegaA || "");
@@ -600,8 +603,37 @@ function aggiornaLatoPresto() { clearTimeout(_presto); _presto = setTimeout(aggi
 function disegnaAccesso() {
   const senza = !ST.chiave;
   const titolo = t(senza ? "accesso_titolo" : "err_accesso_titolo"), testo = t(senza ? "accesso_testo" : "err_accesso");
+  // il campo per INCOLLARE il link personale (utente 2026-11-26): chi arriva dal pulsante della mail su un dispositivo
+  // nuovo non ha dove metterlo; si accetta il link intero o la sola chiave
   setHTML($("#p-accesso"), `<div class="eh-contenuto"><section class="scheda eh-accesso">${testa({ icona: senza ? "utente" : "avviso", titolo })}
-    <div class="corpo"><div class="avviso ${senza ? "l-acc" : "l-warn"}"><b>${esc(titolo)}</b><div class="testo">${esc(testo)}</div></div></div></section></div>`);
+    <div class="corpo"><div class="avviso ${senza ? "l-acc" : "l-warn"}"><b>${esc(titolo)}</b><div class="testo">${esc(testo)}</div></div>
+      <label class="eh-campo eh-incolla"><span class="et">${esc(t("accesso_campo"))}</span>
+        <span class="campo"><input id="link-personale" type="text" placeholder="https://lasit-laser.github.io/expo-hub-commerciali/#k=…" spellcheck="false" autocomplete="off"></span></label>
+      <div class="eh-errore-link" id="errore-link" hidden>${esc(t("accesso_non_valido"))}</div>
+      <button class="pul principale" id="b-entra">${ic("avanti")}<span>${esc(t("accesso_entra"))}</span></button>
+    </div></section></div>`);
+}
+// il link incollato: se contiene una chiave valida per il motore si entra, altrimenti si dice sotto il campo
+async function entraConLink() {
+  const v = ($("#link-personale").value || "").trim();
+  const m = v.match(/k=([A-Za-z0-9]+)/) || v.match(/^([A-Za-z0-9]{16,})$/);
+  const errore = $("#errore-link");
+  if (!m) { errore.hidden = false; return; }
+  const b = $("#b-entra"); b.disabled = true; b.classList.add("occupato");
+  try {
+    const prima = ST.chiave;
+    ST.chiave = m[1];
+    try { ST.io = await chiama("io", { completo: true }); }
+    catch (e) { ST.chiave = prima; if (e.codice === "accesso") { errore.hidden = false; return; } throw e; }
+    try { localStorage.setItem(CHIAVE_LS, m[1]); } catch (e) { /* resta per questa volta */ }
+    ST.dettagli = ST.io.dettagli || {};
+    if (LINGUE[ST.io.commerciale.lingua] && !localStorage.getItem(LINGUA_LS)) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
+    ST.pagina = "elenco";
+    $("#p-accesso").classList.add("nascosta");
+    $("#p-elenco").classList.remove("nascosta");
+    disegnaBarra(); disegnaElenco(); pronto(); controllaNovita();
+  } catch (e) { avvisaErrore(e); }
+  finally { if (b.isConnected) { b.disabled = false; b.classList.remove("occupato"); } }
 }
 function mostraAccesso() {
   ST.pagina = "accesso";

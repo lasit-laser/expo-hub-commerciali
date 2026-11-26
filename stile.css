@@ -27,6 +27,12 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 /* ---------------------------------------------------------------- elenco delle fiere */
 .eh-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; align-content: start; }
 .eh-carta { cursor: pointer; }
+/* accesso: il campo per incollare il link personale (utente 2026-11-26) */
+.eh-accesso .corpo { display: flex; flex-direction: column; gap: 14px; }
+.eh-incolla { display: flex; flex-direction: column; gap: 6px; }
+.eh-incolla .campo input { width: 100%; }
+.eh-errore-link { color: var(--c-ko); font-size: 11.5px; }
+.eh-accesso #b-entra { align-self: flex-end; }
 .eh-carta .testa h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .eh-carta .corpo { display: flex; flex-direction: column; gap: 8px; }
 /* il cestino sulla carta (utente 2026-11-26): discreto, rosso al passaggio del mouse */
