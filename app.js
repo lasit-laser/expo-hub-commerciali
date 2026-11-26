@@ -4,7 +4,8 @@
 const CHIAVE_LS = "expohub_chiave", LINGUA_LS = "expohub_lingua";
 const TIPI = ["stand", "rollup", "totem", "banco", "video", "brochure", "catalogo", "inviti", "gadget", "altro"];
 const UNITA = ["mm", "cm", "m", "px"];
-const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], caricamenti: [], salvato: "", invio: false, pagina: "elenco" };
+const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], caricamenti: [], salvato: "", invio: false, pagina: "elenco",
+  letti: {}, lettura: null };      // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
 
 /* ---------------------------------------------------------------------------------------- motore */
 async function chiama(azione, dati = {}) {
@@ -17,8 +18,10 @@ async function chiama(azione, dati = {}) {
     const err = new Error(t("err_rete")); err.codice = "rete"; throw err;
   }
   if (!j.ok) {
-    const tradotti = { fiera: "err_nome", date_o_documenti: "err_date_doc", accesso: "err_accesso" };
-    const err = new Error(tradotti[j.codice] ? t(tradotti[j.codice]) : j.errore); err.codice = j.codice; throw err;
+    const tradotti = { accesso: "err_accesso", date_ordine: "err_date_ordine", lettura_limite: "lettura_limite" };
+    const testo = j.codice === "obbligatori" ? t("err_obbligatori", { campi: nomiCampi(j.campi || []) })
+      : tradotti[j.codice] ? t(tradotti[j.codice]) : j.errore;
+    const err = new Error(testo); err.codice = j.codice; throw err;
   }
   // ogni dettaglio appena letto (dopo un salvataggio, un file, una risposta) aggiorna anche quelli già in memoria:
   // riaprendo la fiera si vede subito com'è ora, non com'era all'ultima lettura dell'elenco
@@ -153,10 +156,18 @@ function nomeRichiesta() {
   const d = ST.richiesta && ST.richiesta.dati;
   return (d && d.fiera && d.fiera.nome) || t("titolo_nuova");
 }
-const campo = (k, et, val, { tipo = "text", s = "s2", obbl = false, area = false, segnaposto = "" } = {}) =>
-  `<label class="eh-campo ${s}"><span class="et">${esc(et)}${obbl ? `<b>${esc(t("obbligatorio"))}</b>` : ""}</span>` +
+// I campi della fiera da compilare SEMPRE (utente 2026-11-26; gli stessi del motore, OBBLIGATORI in Code.gs): nome,
+// edizione, città, paese, primo e ultimo giorno. Padiglione, stand e sito no: spesso arrivano dopo.
+const OBBLIGATORI = ["fiera.nome", "fiera.edizione", "fiera.citta", "fiera.paese", "fiera.inizio", "fiera.fine"];
+const ETICHETTE = { nome: "c_nome", edizione: "c_edizione", citta: "c_citta", paese: "c_paese", inizio: "c_inizio", fine: "c_fine" };
+const nomiCampi = (campi) => campi.map((k) => t(ETICHETTE[String(k).replace(/^fiera\./, "")] || "c_nome")).join(", ");
+const mancanti = (d) => OBBLIGATORI.filter((k) => { const [a, b] = k.split("."); return !String(d[a][b] || "").trim(); });
+const campo = (k, et, val, { tipo = "text", s = "s2", area = false, segnaposto = "" } = {}) => {
+  const obbl = OBBLIGATORI.includes(k);
+  return `<label class="eh-campo ${s}" data-fc="${k}"><span class="et">${esc(et)}${obbl ? `<b data-tip="${esc(t("obbligatorio"))}">*</b>` : ""}</span>` +
   (area ? `<span class="campo eh-area"><textarea data-f="${k}" placeholder="${esc(segnaposto)}" spellcheck="true">${esc(val)}</textarea></span>`
     : `<span class="campo"><input data-f="${k}" type="${tipo}" value="${esc(val)}" spellcheck="false" autocomplete="off"></span>`) + `</label>`;
+};
 
 function materialeHTML(m) {
   const id = m.id || "m" + Math.random().toString(36).slice(2, 9);
@@ -272,7 +283,7 @@ function disegnaRichiesta(d) {
       <div class="colonna">
         <section class="scheda">${testa({ icona: "calendario", titolo: t("sez_fiera") })}
           <div class="corpo"><div class="eh-campi">
-            ${campo("fiera.nome", t("c_nome"), f.nome, { s: "s4", obbl: true })}
+            ${campo("fiera.nome", t("c_nome"), f.nome, { s: "s4" })}
             ${campo("fiera.edizione", t("c_edizione"), f.edizione, { s: "s2" })}
             ${campo("fiera.citta", t("c_citta"), f.citta, { s: "s3" })}
             ${campo("fiera.paese", t("c_paese"), f.paese, { s: "s3" })}
@@ -287,6 +298,7 @@ function disegnaRichiesta(d) {
           <div class="corpo">
             <div class="eh-rilascio" id="rilascio">${ic("carica")}<span>${esc(t("doc_trascina"))}</span>
               <button class="pul medio" id="b-scegli">${ic("documento")}<span>${esc(t("doc_scegli"))}</span></button></div>
+            <div id="lettura">${letturaHTML()}</div>
             <div id="documenti">${listaFile("allestitore")}</div>
             <div class="eh-campi" style="margin-top:16px">
               <div class="eh-sotto-titolo">${esc(t("sez_allestitore"))}</div>
@@ -318,6 +330,7 @@ function disegnaRichiesta(d) {
       </div>
     </div></div>`);
   if (!nuova) $("#p-richiesta")._html = null;     // il modulo resta: le parti vive si aggiornano a parte
+  segnaLetti();
   aggiornaLato();
 }
 
@@ -348,6 +361,7 @@ function listaFile(categoria, materiale = "") {
 function aggiornaFile() {
   if (ST.pagina !== "richiesta") return;
   morph($("#documenti"), listaFile("allestitore"));
+  morph($("#lettura"), letturaHTML());
   $$("[data-allegati]").forEach((el) => morph(el, listaFile("materiale", el.dataset.allegati)));
   $$("[data-versioni]").forEach((el) => morph(el, versioniHTML(el.dataset.versioni)));
   aggiornaLato();
@@ -358,7 +372,102 @@ function aggiungiFile(files, categoria, materiale = "") {
     ST.caricamenti.push(voce);
     if (ST.richiesta.id) carica(voce).catch(() => {});
   }
+  if (categoria === "allestitore") leggiDocumenti(Array.from(files));
   aggiornaFile();
+}
+
+/* ---------------------------------------------------------------------------------------- lettura dei documenti */
+// Il commerciale carica i documenti dell'allestitore e i campi del modulo si COMPILANO DA SOLI (utente 2026-11-26):
+// la pagina manda i file al motore, Gemini li legge e propone i valori. Si riempiono SOLO i campi vuoti (quello che il
+// commerciale ha scritto non si tocca; il paese messo di partenza in una richiesta nuova sì) e restano segnati
+// "letto dal documento, controlla" finché non li si cambia. Anche prima dell'invio: i file si leggono dal browser.
+// Gemini legge PDF, immagini e testo (fino a 14 MB per volta): gli altri file si dicono "non letti".
+const LETTURA_MB = 14;
+const TIPI_LETTURA = { pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", webp: "image/webp",
+  heic: "image/heic", heif: "image/heif", txt: "text/plain", eml: "text/plain", csv: "text/plain", html: "text/plain", htm: "text/plain", md: "text/plain" };
+function tipoLettura(file) {
+  const est = String(file.name || "").split(".").pop().toLowerCase();
+  return TIPI_LETTURA[est] || (/^(application\/pdf|image\/(png|jpeg|webp|heic|heif))$/.test(file.type) ? file.type : "");
+}
+const comeBase64 = (file) => new Promise((ok, ko) => {
+  const r = new FileReader();
+  r.onload = () => ok(String(r.result).replace(/^data:[^,]*,/, ""));
+  r.onerror = () => ko(r.error);
+  r.readAsDataURL(file);
+});
+async function leggiDocumenti(files) {
+  const richiesta = ST.richiesta, max = LETTURA_MB * 1024 * 1024;
+  const leggibili = files.filter((f) => tipoLettura(f) && f.size > 0 && f.size <= max);
+  const nonLetti = files.filter((f) => !leggibili.includes(f)).map((f) => f.name);
+  if (!leggibili.length) {
+    if (nonLetti.length && ST.lettura) { ST.lettura.nonLetti = nonLetti; aggiornaFile(); }
+    return;
+  }
+  // gruppi da al massimo 14 MB: ogni gruppo è una lettura (i documenti insieme si capiscono meglio)
+  const gruppi = [];
+  leggibili.forEach((f) => {
+    const g = gruppi.find((x) => x.peso + f.size <= max);
+    if (g) { g.files.push(f); g.peso += f.size; } else gruppi.push({ files: [f], peso: f.size });
+  });
+  ST.lettura = { stato: "corso", n: 0, nonLetti };
+  aggiornaFile();
+  const trovati = {};
+  let errore = null;
+  for (const g of gruppi) {
+    try {
+      const pacco = await Promise.all(g.files.map(async (f) => ({ nome: f.name, tipo: tipoLettura(f), dati: await comeBase64(f) })));
+      const j = await chiama("leggi_documenti", { files: pacco, lingua: LINGUA });
+      Object.entries(j.campi || {}).forEach(([k, v]) => { if (!trovati[k]) trovati[k] = v; });
+    } catch (e) {
+      // lettura non attiva (manca la chiave di Gemini nel motore): la pagina resta com'era, senza dire niente
+      if (e.codice === "lettura_spenta") { if (ST.richiesta === richiesta) { ST.lettura = null; aggiornaFile(); } return; }
+      errore = e;
+    }
+  }
+  if (ST.richiesta !== richiesta || ST.pagina !== "richiesta") return;      // nel frattempo si è aperta un'altra fiera
+  const n = compilaLetti(trovati);
+  ST.lettura = { stato: errore && !n ? "errore" : n ? "fatta" : "niente", n, nonLetti, limite: !!(errore && errore.codice === "lettura_limite") };
+  aggiornaFile();
+}
+function compilaLetti(trovati) {
+  const p = $("#p-richiesta"), paeseDi = (ST.io && ST.io.commerciale && ST.io.commerciale.paese) || "";
+  let n = 0;
+  Object.entries(trovati).forEach(([k, v]) => {
+    const el = $(`[data-f="${k}"]`, p);
+    if (!el || !v || !v.valore) return;
+    const attuale = el.value.trim();
+    const diPartenza = !ST.richiesta.id && k === "fiera.paese" && attuale === paeseDi && ST.letti[k] === undefined;
+    if (attuale && !diPartenza) return;
+    el.value = v.valore;
+    ST.letti[k] = v.file || "";
+    const l = el.closest("[data-fc]"); if (l) l.classList.remove("manca");
+    n++;
+  });
+  segnaLetti();
+  aggiornaLato();
+  return n;
+}
+// i campi compilati dai documenti: fondo azzurro e la stellina col nome del file (sparisce appena li si cambia)
+function segnaLetti() {
+  $$("#p-richiesta [data-fc]").forEach((l) => {
+    const k = l.dataset.fc, file = ST.letti[k], c = $(".campo", l), segno = $(".eh-letto", l);
+    l.classList.toggle("letto", file !== undefined);
+    if (file === undefined) { if (segno) segno.remove(); return; }
+    const tip = file ? t("letto_da", { file }) : t("letto_doc");
+    if (segno) segno.dataset.tip = tip;
+    else if (c) c.insertAdjacentHTML("beforeend", `<span class="eh-letto" data-tip="${esc(tip)}">${ic("letto")}</span>`);
+  });
+}
+function letturaHTML() {
+  const L = ST.lettura;
+  if (!L) return "";
+  const non = L.nonLetti && L.nonLetti.length
+    ? `<div class="eh-lettura l-warn">${ic("avviso")}<span>${esc(t("lettura_non_letti", { nomi: L.nonLetti.join(", ") }))}</span></div>` : "";
+  const riga = L.stato === "corso" ? `<div class="eh-lettura l-acc in-corso">${ic("letto")}<span>${esc(t("lettura_corso"))}</span></div>`
+    : L.stato === "fatta" ? `<div class="eh-lettura l-acc">${ic("letto")}<span>${esc(t("lettura_fatta", { n: L.n }))}</span></div>`
+    : L.stato === "niente" ? `<div class="eh-lettura l-mu">${ic("info")}<span>${esc(t("lettura_niente"))}</span></div>`
+    : `<div class="eh-lettura l-warn">${ic("avviso")}<span>${esc(t(L.limite ? "lettura_limite" : "lettura_errore"))}</span></div>`;
+  return riga + non;
 }
 async function carica(voce) {
   voce.stato = "su"; voce.p = 0; aggiornaFile();
@@ -464,7 +573,7 @@ async function apriRichiesta(id) {
       ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate finché la fiera è aperta
       segnaVisto(id, ST.eventi);
     } else { ST.richiesta = { id: null, stato: "inviata", dati: vuota() }; ST.eventi = []; }
-    ST.caricamenti = [];
+    ST.caricamenti = []; ST.letti = {}; ST.lettura = null;
     const dati = Object.assign(vuota(), ST.richiesta.dati);
     $("#p-richiesta")._html = null;
     ST.pagina = "richiesta";
@@ -551,12 +660,23 @@ function domanda(titolo, testo, si) {
 }
 async function salva() {
   const d = leggiModulo(), nuova = !ST.richiesta.id;
-  if (!d.fiera.nome) { await dialogo({ tipo: "avviso", titolo: t("err_titolo"), testo: t("err_nome"), si: t("ok") }); $('[data-f="fiera.nome"]').focus(); return; }
+  // i campi obbligatori vuoti si segnano in rosso e si dice quali sono; il primo prende il cursore
+  const m = mancanti(d);
+  $$("#p-richiesta [data-fc]").forEach((l) => l.classList.toggle("manca", m.includes(l.dataset.fc)));
+  if (m.length) {
+    await dialogo({ tipo: "avviso", titolo: t("err_titolo"), testo: t("err_obbligatori", { campi: nomiCampi(m) }), si: t("ok") });
+    const primo = $(`[data-f="${m[0]}"]`); if (primo) primo.focus();
+    return;
+  }
+  if (d.fiera.fine < d.fiera.inizio) {
+    const l = $('#p-richiesta [data-fc="fiera.fine"]'); if (l) l.classList.add("manca");
+    await dialogo({ tipo: "avviso", titolo: t("err_titolo"), testo: t("err_date_ordine"), si: t("ok") });
+    return;
+  }
   const inCoda = ST.caricamenti.filter((c) => c.stato === "coda");
-  if (nuova && !d.fiera.inizio && !inCoda.length) { await dialogo({ tipo: "avviso", titolo: t("err_titolo"), testo: t("err_date_doc"), si: t("ok") }); return; }
   ST.invio = true; aggiornaLato();
   try {
-    const r = await chiama("salva", { id: ST.richiesta.id, dati: d, con_documenti: inCoda.length > 0 });
+    const r = await chiama("salva", { id: ST.richiesta.id, dati: d });
     ST.richiesta.id = r.id;
     for (const voce of inCoda) { try { await carica(voce); } catch (e) { /* resta "non caricato" nell'elenco */ } }
     const j = await chiama("leggi", { id: r.id });
@@ -626,7 +746,7 @@ function lega() {
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "link-personale") entraConLink(); });
   document.addEventListener("input", (e) => {
-    if (e.target.id === "link-personale") { const er = $("#errore-link"); if (er) er.hidden = true; } if (e.target.closest("#p-richiesta") && e.target.id !== "commento") aggiornaLatoPresto(); });
+    if (e.target.id === "link-personale") { const er = $("#errore-link"); if (er) er.hidden = true; } if (e.target.closest("#p-richiesta") && e.target.id !== "commento") { toccato(e.target); aggiornaLatoPresto(); } });
   $("#scelta-file").addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []); e.target.value = "";
     if (files.length) aggiungiFile(files, _allegaA ? "materiale" : "allestitore", _allegaA || "");
@@ -644,6 +764,13 @@ function lega() {
   window.addEventListener("dragover", (e) => e.preventDefault());   // un file lasciato fuori dalla zona non apre il browser
   window.addEventListener("drop", (e) => e.preventDefault());
   window.addEventListener("beforeunload", (e) => { if (ST.pagina === "richiesta" && daSalvare()) { e.preventDefault(); e.returnValue = ""; } });
+}
+// un campo cambiato a mano: via il segno "letto dal documento" e il rosso di campo obbligatorio vuoto
+function toccato(el) {
+  const k = el.dataset && el.dataset.f, l = el.closest("[data-fc]");
+  if (!k || !l) return;
+  if (ST.letti[k] !== undefined) { delete ST.letti[k]; segnaLetti(); }
+  if (l.classList.contains("manca") && el.value.trim()) l.classList.remove("manca");
 }
 let _presto = null;
 function aggiornaLatoPresto() { clearTimeout(_presto); _presto = setTimeout(aggiornaLato, 120); }

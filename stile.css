@@ -154,3 +154,18 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 
 /* accesso senza link */
 .eh-accesso { max-width: 560px; margin: 80px auto 0; }
+
+/* campi obbligatori (asterisco) e campi compilati dai documenti dell'allestitore (utente 2026-11-26) */
+.eh-campo .et b { cursor: default; }
+.eh-campo.manca .campo { border-color: var(--c-ko); background: var(--c-fondo_ko); }
+.eh-campo.letto .campo { background: var(--c-fondo_acc); border-color: var(--c-accento); position: relative; }
+.eh-campo.letto .campo input { padding-right: 22px; }
+.eh-letto { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); display: flex; color: var(--c-accento); font-size: 14px; }
+.eh-letto i.svg { display: flex; }
+.eh-lettura { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 8px 12px; border-radius: 12px; font-size: 12px;
+  line-height: 16px; background: var(--c-fondo_acc); color: var(--c-testo); }
+.eh-lettura > i { flex: none; display: flex; font-size: 15px; color: var(--c-accento); }
+.eh-lettura.l-warn { background: var(--c-fondo_warn); } .eh-lettura.l-warn > i { color: var(--c-warn); }
+.eh-lettura.l-mu { background: var(--c-fondo_mu); } .eh-lettura.l-mu > i { color: var(--c-tenue); }
+.eh-lettura.in-corso > i { animation: eh-pulsa 1.1s ease-in-out infinite; }
+@keyframes eh-pulsa { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.82); } }

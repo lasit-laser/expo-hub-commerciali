@@ -31,6 +31,7 @@ const SVG_ICONE = {
   aggiorna: '<path d="M19 8a7.5 7.5 0 1 0 1 6"/><path d="M19 3.5V8h-4.5"/>',
   scadenza: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 2M9 2.5h6"/>',
   stand: '<path d="M3 9l9-5 9 5v10l-9 2-9-2z"/><path d="M12 4v17"/>',
+  letto: '<path d="M12 3.5l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
 };
 function ic(nome) {
   const d = SVG_ICONE[nome];

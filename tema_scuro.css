@@ -100,3 +100,6 @@ html.scuro .eh-voce.attiva { border-color: #5CB8F288; }
 .eh-tema.interruttore { width: 76px; flex: none; }
 .eh-tema.interruttore button { padding: 0; font-size: 14px; }
 .eh-tema.interruttore button svg { width: 15px; height: 15px; }
+/* pagina dei commerciali: campi compilati dai documenti e campi obbligatori vuoti (2026-11-26) */
+html.scuro .eh-campo.letto .campo { background: var(--c-fondo_acc); }
+html.scuro .eh-campo.manca .campo { background: var(--c-fondo_ko); }
