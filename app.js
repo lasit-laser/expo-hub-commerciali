@@ -495,6 +495,9 @@ async function tornaElenco() {
   }
   ST.pagina = "elenco"; ST.richiesta = null;
   disegnaBarra();
+  // l'elenco si ridisegna SUBITO con quello che si sa già (utente 2026-11-26: il pallino della fiera appena letta
+  // restava finché non rispondeva il motore, 3-4 s, e sembrava non sparire); poi la rilettura lo aggiorna
+  disegnaElenco();
   cambiaPagina($("#p-richiesta"), $("#p-elenco"), () => ST.pagina === "elenco");
   aggiornaElenco();
 }
