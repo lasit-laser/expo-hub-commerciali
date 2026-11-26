@@ -508,7 +508,7 @@ async function aggiornaElenco() {
 // l'elenco e la richiesta aperta (stato, cronologia, versioni). Il modulo che si sta scrivendo NON si tocca.
 let _firma = null, _controllo = false;
 async function controllaNovita() {
-  if (!ST.chiave || !ST.io || document.hidden || _controllo || ST.invio) return;
+  if (!ST.chiave || !ST.io || _controllo || ST.invio) return;
   _controllo = true;
   try {
     const { firma } = await chiama("firma");
@@ -527,7 +527,15 @@ async function controllaNovita() {
   } catch (e) { /* si riprova al giro dopo */ }
   finally { _controllo = false; }
 }
-setInterval(controllaNovita, 20000);
+// LIVE (utente 2026-11-26: i pallini comparivano solo riaprendo l'app): ogni 10 s con la pagina davanti e ogni 30 s
+// anche quando è dietro altre finestre o ridotta a icona (prima si fermava), così tornandoci le novità sono già lì
+let _ultimoControllo = 0;
+setInterval(() => {
+  const ogni = document.hidden ? 30000 : 10000;
+  if (Date.now() - _ultimoControllo < ogni - 500) return;
+  _ultimoControllo = Date.now();
+  controllaNovita();
+}, 5000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) controllaNovita(); });
 function domanda(titolo, testo, si) {
   const p = dialogo({ tipo: "domanda", titolo, testo, si });
