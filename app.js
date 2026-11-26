@@ -502,40 +502,47 @@ async function tornaElenco() {
   aggiornaElenco();
 }
 async function aggiornaElenco() {
-  try { ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; inizializzaVisti(); disegnaElenco(); disegnaBarra(); } catch (e) { /* resta quello di prima */ }
+  try { applicaIo(await chiama("io", { completo: true })); } catch (e) { /* resta quello di prima */ }
 }
 // Ogni 20 s (e quando si torna sulla pagina): "è cambiato qualcosa?" con una chiamata leggerissima; se sì si rileggono
 // l'elenco e la richiesta aperta (stato, cronologia, versioni). Il modulo che si sta scrivendo NON si tocca.
 let _firma = null, _controllo = false;
+// i dati di `io` appena arrivati: elenco, dettagli e firma ("com'erano i fogli") per il controllo successivo
+function applicaIo(j) {
+  ST.io = j; ST.dettagli = j.dettagli || {};
+  if (j.firma) _firma = j.firma;
+  inizializzaVisti(); disegnaElenco(); disegnaBarra();
+}
+// LIVE (utente 2026-11-26): UNA chiamata sola, `io` con la firma che la pagina conosce; se nei fogli non è cambiato
+// niente il motore risponde subito "uguale", se no manda già elenco e dettagli. Con la fiera aperta si aggiornano
+// anche stato, cronologia e versioni. Il modulo che si sta scrivendo NON si tocca.
 async function controllaNovita() {
   if (!ST.chiave || !ST.io || _controllo || ST.invio) return;
   _controllo = true;
   try {
-    const { firma } = await chiama("firma");
-    if (_firma !== null && firma !== _firma) {
-      await aggiornaElenco();                    // elenco E dettagli in una chiamata sola
-      if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id) {
-        const j = (ST.dettagli && ST.dettagli[ST.richiesta.id]) || await chiama("leggi", { id: ST.richiesta.id });
-        if (ST.richiesta && ST.richiesta.id === j.richiesta.id) {
-          ST.eventi = j.eventi; ST.richiesta.stato = j.richiesta.stato; ST.richiesta.aggiornata = j.richiesta.aggiornata;
-          segnaVisto(ST.richiesta.id, ST.eventi);     // arrivate mentre la si guarda: segnate ora, viste all'uscita
-          aggiornaFile();
-        }
-      }
+    const j = await chiama("io", { completo: true, firma_nota: _firma || "" });
+    if (j.uguale) return;
+    applicaIo(j);
+    const id = ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id;
+    const d = id && ST.dettagli[id];
+    if (d) {
+      ST.eventi = d.eventi; ST.richiesta.stato = d.richiesta.stato; ST.richiesta.aggiornata = d.richiesta.aggiornata;
+      segnaVisto(id, ST.eventi);                  // arrivate mentre la si guarda: segnate ora, viste all'uscita
+      aggiornaFile();
     }
-    _firma = firma;
   } catch (e) { /* si riprova al giro dopo */ }
   finally { _controllo = false; }
 }
-// LIVE (utente 2026-11-26: i pallini comparivano solo riaprendo l'app): ogni 10 s con la pagina davanti e ogni 30 s
-// anche quando è dietro altre finestre o ridotta a icona (prima si fermava), così tornandoci le novità sono già lì
-let _ultimoControllo = 0;
-setInterval(() => {
-  const ogni = document.hidden ? 30000 : 10000;
-  if (Date.now() - _ultimoControllo < ogni - 500) return;
-  _ultimoControllo = Date.now();
-  controllaNovita();
-}, 5000);
+// un controllo ogni 3 s con la pagina davanti, ogni 15 s quando è dietro altre finestre o ridotta a icona (prima si
+// fermava: le novità comparivano solo riaprendo l'app); tornandoci, un controllo subito
+const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
+(async function giroLive() {
+  for (;;) {
+    const inizio = Date.now();
+    await controllaNovita();
+    await pausa(Math.max(500, (document.hidden ? 15000 : 3000) - (Date.now() - inizio)));
+  }
+})();
 document.addEventListener("visibilitychange", () => { if (!document.hidden) controllaNovita(); });
 function domanda(titolo, testo, si) {
   const p = dialogo({ tipo: "domanda", titolo, testo, si });
@@ -671,7 +678,7 @@ async function entraConLink() {
     try { ST.io = await chiama("io", { completo: true }); }
     catch (e) { ST.chiave = prima; if (e.codice === "accesso") { errore.hidden = false; return; } throw e; }
     try { localStorage.setItem(CHIAVE_LS, m[1]); } catch (e) { /* resta per questa volta */ }
-    ST.dettagli = ST.io.dettagli || {}; inizializzaVisti();
+    ST.dettagli = ST.io.dettagli || {}; _firma = ST.io.firma || null; inizializzaVisti();
     if (LINGUE[ST.io.commerciale.lingua] && !localStorage.getItem(LINGUA_LS)) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
     ST.pagina = "elenco";
     $("#p-accesso").classList.add("nascosta");
@@ -704,7 +711,7 @@ async function avvio() {
   disegnaBarra();
   if (!ST.chiave) { mostraAccesso(); return pronto(); }
   try {
-    ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; inizializzaVisti();
+    ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; _firma = ST.io.firma || null; inizializzaVisti();
     if (!salvata && LINGUE[ST.io.commerciale.lingua]) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
     disegnaBarra();
     disegnaElenco();
