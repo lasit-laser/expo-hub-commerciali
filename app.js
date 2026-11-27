@@ -66,9 +66,13 @@ const pillolaStato = (s) => sigla({ l: LIVELLO_STATO[s] || "mu", t: t("stato_" +
 function disegnaBarra() {
   const c = ST.io && ST.io.commerciale;
   const dove = ST.pagina === "richiesta" ? `<span class="c-tenue">›</span><b>${esc(nomeRichiesta())}</b>` : "";
+  // (utente 2026-11-27) tre colonne come la barra del pannello del marketing: a sinistra logo e percorso, AL CENTRO il
+  // selettore "Le mie fiere | Tutte le fiere | Calendario" (grande come le sezioni del pannello), a destra i comandi
+  const sezioni = c ? interruttoreHTML("vista", [t("titolo_elenco"), t("titolo_tutte"), t("titolo_calendario")], VISTE.indexOf(ST.vista), { tre: true }) : "";
   setHTML($("#barra"), `
-    <div class="eh-marchio"><img class="segno" src="icona.svg" alt=""><b>EXPO HUB</b></div>
-    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t(dove ? "titolo_elenco" : TITOLI_VISTE[ST.vista] || "titolo_elenco"))}</span>${dove}</div>
+    <div class="eh-barra-sinistra"><div class="eh-marchio"><img class="segno" src="icona.svg" alt=""><b>EXPO HUB</b></div>
+    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t(TITOLI_VISTE[ST.vista] || "titolo_elenco"))}</span>${dove}</div></div>
+    <div class="eh-sezioni">${sezioni}</div>
     <div class="barra-destra">
       <span class="letto" id="avviso-barra"></span>
       ${c ? `<div class="utente"><span class="iniziali">${esc(iniziali(c.nome))}</span><span class="nome">${esc(c.nome)}</span></div>` : ""}
@@ -150,10 +154,10 @@ function disegnaElenco() {
   // "Le mie fiere" / "Tutte le fiere" (utente 2026-11-27): il selettore a destra sulla riga del titolo
   // + "Calendario" (utente 2026-11-27): il calendario come quello del marketing, con tutte le fiere o solo le proprie
   const tutteLe = ST.vista === "tutte", cal = ST.vista === "calendario";
-  // (utente 2026-11-27) sulla riga del titolo, a destra, "Nuova richiesta"; il selettore delle viste SOTTO il titolo
+  // (utente 2026-11-27) sulla riga del titolo, a destra, "Nuova richiesta"; il selettore delle viste è al centro della
+  // barra in alto (disegnaBarra), sotto il titolo resta la riga vuota della frase come prima
   const nuovaR = ST.io ? `<div class="eh-vista"><button class="pul principale medio" id="b-nuova">${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div>` : "";
-  const selettore = `<div class="eh-selettore">${interruttoreHTML("vista", [t("titolo_elenco"), t("titolo_tutte"), t("titolo_calendario")],
-    VISTE.indexOf(ST.vista), { tre: true })}</div>`;
+  const selettore = `<div class="frase"> </div>`;
   const titolo = t(cal ? "titolo_calendario" : tutteLe ? "titolo_tutte" : "titolo_elenco");
   const accanto = cal ? `<div class="eh-filtri">${legendaCal()}</div>` : !tutteLe && tutte.length ? `<div class="eh-filtri">${filtri}</div>` : "";
   const testa_ = `<div class="intestazione"><div class="titoli"><div class="occhiello">${esc(t("occhiello_elenco"))}</div>
@@ -885,7 +889,16 @@ function lega() {
     const la = el.closest("[data-lascia]"); if (la) { lasciaFiera(la.dataset.lascia); return; }
     const pa = el.closest("[data-partecipa]"); if (pa) { partecipa(pa.dataset.partecipa, pa); return; }
     const vi = el.closest('[data-int="vista"] button');
-    if (vi) { const i = scegliInterruttore(vi.closest("[data-int]"), vi); if (i !== null) { ST.vista = VISTE[i]; setTimeout(() => { disegnaElenco(); disegnaBarra(); }, 180); } return; }
+    if (vi) {
+      const i = scegliInterruttore(vi.closest("[data-int]"), vi);
+      if (i === null) return;
+      const prima = ST.vista; ST.vista = VISTE[i];
+      // dentro una fiera il selettore riporta all'elenco scelto (prima chiede delle modifiche non salvate: se si resta,
+      // il selettore torna com'era)
+      if (ST.pagina === "richiesta") tornaElenco().then(() => { if (ST.pagina === "richiesta") { ST.vista = prima; disegnaBarra(); } });
+      else setTimeout(() => { disegnaElenco(); disegnaBarra(); }, 180);
+      return;
+    }
     // calendario: vista (Settimana/Mese/Anno), frecce (di una settimana, un mese o un anno), Oggi, mese piccolo, flag
     const vc = el.closest('[data-int="vistacal"] button');
     if (vc) { const i = scegliInterruttore(vc.closest("[data-int]"), vc); if (i !== null) { ST.calVista = ["settimana", "mese", "anno"][i];
