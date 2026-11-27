@@ -6,7 +6,8 @@ const TIPI = ["stand", "rollup", "totem", "banco", "video", "brochure", "catalog
 const UNITA = ["mm", "cm", "m", "px"];
 const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], caricamenti: [], salvato: "", invio: false, pagina: "elenco",
   letti: {}, lettura: null,        // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
-  vista: "mie" };                  // "mie" (Le mie fiere) o "tutte" (Tutte le fiere, utente 2026-11-27)
+  vista: "mie",                    // "mie" (Le mie fiere), "tutte" (Tutte le fiere) o "calendario" (utente 2026-11-27)
+  calVista: "mese", calMese: new Date(), soloMie: false };   // calendario: vista, giorno di riferimento, "Solo le mie fiere"
 
 /* ---------------------------------------------------------------------------------------- motore */
 async function chiama(azione, dati = {}) {
@@ -67,14 +68,15 @@ function disegnaBarra() {
   const dove = ST.pagina === "richiesta" ? `<span class="c-tenue">›</span><b>${esc(nomeRichiesta())}</b>` : "";
   setHTML($("#barra"), `
     <div class="eh-marchio"><img class="segno" src="icona.svg" alt=""><b>EXPO HUB</b></div>
-    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t(ST.vista === "tutte" && !dove ? "titolo_tutte" : "titolo_elenco"))}</span>${dove}</div>
+    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t(dove ? "titolo_elenco" : TITOLI_VISTE[ST.vista] || "titolo_elenco"))}</span>${dove}</div>
     <div class="barra-destra">
       <span class="letto" id="avviso-barra"></span>
-      ${temaHTML()}
-      <button class="pul medio eh-lingua" data-campo="lingua" id="b-lingua">${ic("lingua")}<span>${esc(LINGUE[LINGUA]._nome)}</span></button>
       ${c ? `<div class="utente"><span class="iniziali">${esc(iniziali(c.nome))}</span><span class="nome">${esc(c.nome)}</span></div>` : ""}
-      ${c ? `<button class="pul principale medio" id="b-nuova">${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button>` : ""}
+      <button class="pul medio eh-lingua" data-campo="lingua" id="b-lingua">${ic("lingua")}<span>${esc(LINGUE[LINGUA]._nome)}</span></button>
+      ${temaHTML()}
     </div>`);
+  // (utente 2026-11-27) "Nuova richiesta" non sta più qui: è a destra sulla riga del titolo dell'elenco; qui, da destra,
+  // tema chiaro/scuro, lingua e nome del commerciale
 }
 // tema chiaro / scuro (utente 2026-11-25): il selettore del kit con le sole icone sole e luna; la scelta resta in questo
 // browser (localStorage) e la classe "scuro" su <html> la mette già index.html prima del disegno (niente lampo chiaro)
@@ -146,14 +148,111 @@ function disegnaElenco() {
     <div class="corpo"><div>${esc(t("vuoto_testo"))}</div>
     <button class="pul principale" data-nuova>${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div></section>`;
   // "Le mie fiere" / "Tutte le fiere" (utente 2026-11-27): il selettore a destra sulla riga del titolo
-  const tutteLe = ST.vista === "tutte";
-  const vista = `<div class="eh-vista">${interruttoreHTML("vista", [t("titolo_elenco"), t("titolo_tutte")], tutteLe ? 1 : 0)}</div>`;
-  morph($("#p-elenco"), `<div class="eh-contenuto">
-    <div class="intestazione"><div class="titoli"><div class="occhiello">${esc(t("occhiello_elenco"))}</div>
-      <div class="eh-titolo-riga"><h1>${esc(t(tutteLe ? "titolo_tutte" : "titolo_elenco"))}</h1>${!tutteLe && tutte.length ? `<div class="eh-filtri">${filtri}</div>` : ""}${vista}</div>
-      <div class="frase"> </div></div></div>
-    <div class="eh-griglia">${tutteLe ? carteTutte() : carte || (ST.filtro ? `<div class="eh-nessuna">${esc(t("filtro_nessuna"))}</div>` : vuoto)}</div></div>`);
+  // + "Calendario" (utente 2026-11-27): il calendario come quello del marketing, con tutte le fiere o solo le proprie
+  const tutteLe = ST.vista === "tutte", cal = ST.vista === "calendario";
+  // (utente 2026-11-27) sulla riga del titolo, a destra, "Nuova richiesta"; il selettore delle viste SOTTO il titolo
+  const nuovaR = ST.io ? `<div class="eh-vista"><button class="pul principale medio" id="b-nuova">${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div>` : "";
+  const selettore = `<div class="eh-selettore">${interruttoreHTML("vista", [t("titolo_elenco"), t("titolo_tutte"), t("titolo_calendario")],
+    VISTE.indexOf(ST.vista), { tre: true })}</div>`;
+  const titolo = t(cal ? "titolo_calendario" : tutteLe ? "titolo_tutte" : "titolo_elenco");
+  const accanto = cal ? `<div class="eh-filtri">${legendaCal()}</div>` : !tutteLe && tutte.length ? `<div class="eh-filtri">${filtri}</div>` : "";
+  const testa_ = `<div class="intestazione"><div class="titoli"><div class="occhiello">${esc(t("occhiello_elenco"))}</div>
+      <div class="eh-titolo-riga"><h1>${esc(titolo)}</h1>${accanto}${nuovaR}</div>${selettore}</div></div>`;
+  morph($("#p-elenco"), `<div class="eh-contenuto">${testa_}
+    ${cal ? calendarioHTML() : `<div class="eh-griglia">${tutteLe ? carteTutte() : carte || (ST.filtro ? `<div class="eh-nessuna">${esc(t("filtro_nessuna"))}</div>` : vuoto)}</div>`}</div>`);
 }
+const VISTE = ["mie", "tutte", "calendario"];
+const TITOLI_VISTE = { mie: "titolo_elenco", tutte: "titolo_tutte", calendario: "titolo_calendario" };
+
+/* ---------------------------------------------------------------------------------------- calendario */
+// Il calendario del marketing nella pagina dei commerciali (utente 2026-11-27): Settimana / Mese / Anno, frecce e Oggi,
+// con TUTTE le fiere attive o, col flag "Solo le mie fiere", solo le proprie. Le proprie sono piene, quelle degli altri
+// solo bordate. Le scadenze dei file ci sono solo per le proprie fiere (i materiali degli altri si vedono dopo
+// "Partecipa", come in Tutte le fiere). Clic: la propria si apre, quella di un altro chiede se partecipare.
+const SOLO_MIE_LS = "expohub_solo_mie";
+const isoDi = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function legendaCal() {
+  const q = (cl, testo) => `<span><i class="q ${cl}"></i>${esc(testo)}</span>`;
+  return `<div class="eh-legenda">${q("f", t("cal_mie"))}${ST.soloMie ? "" : q("a", t("cal_altre"))}${q("s", t("cal_scadenze"))}${q("ok", t("cal_consegnati"))}</div>`;
+}
+function fiereCal() {
+  const mie = ((ST.io && ST.io.richieste) || []).filter((r) => !r.archiviata);
+  const idMie = new Set(mie.map((r) => r.id));
+  const fiere = ST.soloMie ? mie : ((ST.io && ST.io.tutte) || []);
+  return { mie, idMie, fiere };
+}
+function calendarioHTML() {
+  const vista = ST.calVista || "mese", rif = ST.calMese || new Date();
+  const { mie, idMie, fiere } = fiereCal();
+  const voci = {}, segni = {};
+  const metti = (iso, html, segno, tip) => { (voci[iso] = voci[iso] || []).push(html); const s = (segni[iso] = segni[iso] || { f: 0, a: 0, s: 0, ok: 0, tip: [] }); s[segno]++; s.tip.push(tip); };
+  for (const r of fiere) {
+    if (!r.inizio) continue;
+    const mia = idMie.has(r.id), nome = [r.fiera, r.edizione].filter(Boolean).join(" ");
+    const chi = (r.persone || [r.organizza].concat(r.partecipanti || [])).filter(Boolean).join(", ");
+    const a = new Date(r.inizio + "T12:00:00"), b = new Date((r.fine || r.inizio) + "T12:00:00");
+    for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1))
+      metti(isoDi(d), `<button class="voce-cal fiera${mia ? "" : " altrui"}" data-cal="${esc(r.id)}" data-tip="${esc(nome + (chi ? " · " + chi : ""))}">${esc(nome)}</button>`, mia ? "f" : "a", nome);
+  }
+  for (const r of mie) {
+    const nome = [r.fiera, r.edizione].filter(Boolean).join(" "), fatta = r.stato === "consegnata";
+    const dati = ((ST.dettagli[r.id] || {}).richiesta || {}).dati || {};
+    for (const m of dati.materiali || []) {
+      if (!m.scadenza) continue;
+      metti(m.scadenza, `<button class="voce-cal scadenza${fatta ? " fatta" : ""}" data-cal="${esc(r.id)}" data-tip="${esc(t("tipo_" + (m.tipo || "altro")) + " · " + nome)}">${esc(t("cal_file", { nome }))}</button>`,
+        fatta ? "ok" : "s", t("cal_file", { nome }));
+    }
+  }
+  const oggi = isoDi(new Date()), fmt = (d, o) => new Intl.DateTimeFormat(locale(), o).format(d);
+  const GS = [...Array(7)].map((_, k) => fmt(new Date(2024, 0, 1 + k), { weekday: "short" }).replace(".", ""));   // 1/1/2024 = lunedì
+  const lunedi = (d) => { const x = new Date(d); x.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return x; };
+  const cella = (d, fuori) => { const iso = isoDi(d);
+    return `<div class="g${fuori ? " fuori" : ""}${iso === oggi ? " oggi" : ""}"><span class="n">${d.getDate()}</span>${(voci[iso] || []).join("")}</div>`; };
+  let titolo, corpo;
+  if (vista === "settimana") {
+    const l = lunedi(rif), giorni = [...Array(7)].map((_, k) => { const d = new Date(l); d.setDate(l.getDate() + k); return d; });
+    titolo = giorni[0].getMonth() === giorni[6].getMonth() ? `${giorni[0].getDate()} – ${fmt(giorni[6], { day: "numeric", month: "long", year: "numeric" })}`
+      : `${fmt(giorni[0], { day: "numeric", month: "long" })} – ${fmt(giorni[6], { day: "numeric", month: "long", year: "numeric" })}`;
+    corpo = `<div class="eh-cal settimana">${GS.map((g) => `<div class="gs">${esc(g)}</div>`).join("")}${giorni.map((d) => cella(d, false)).join("")}</div>`;
+  } else if (vista === "anno") {
+    const anno = rif.getFullYear();
+    titolo = String(anno);
+    corpo = `<div class="eh-anno">${[...Array(12)].map((_, m) => {
+      const primo = new Date(anno, m, 1), vuoti = (primo.getDay() + 6) % 7, n = new Date(anno, m + 1, 0).getDate();
+      const giorni = [...Array(n)].map((_, k) => { const iso = isoDi(new Date(anno, m, k + 1)), s = segni[iso];
+        const cl = s ? (s.s ? " s" : s.f ? " f" : s.a ? " a" : " ok") : "";
+        return `<span class="${(cl + (iso === oggi ? " oggi" : "")).trim()}"${s ? ` data-tip="${esc([...new Set(s.tip)].join(" · "))}"` : ""}>${k + 1}</span>`; }).join("");
+      return `<div class="eh-mese-piccolo" data-vai-mese="${m}"><div class="nome">${esc(fmt(primo, { month: "long" }))}</div>
+        <div class="gg">${GS.map((g) => `<i>${esc(g.charAt(0))}</i>`).join("")}${"<span></span>".repeat(vuoti)}${giorni}</div></div>`; }).join("")}</div>`;
+  } else {
+    const anno = rif.getFullYear(), mese = rif.getMonth(), primo = new Date(anno, mese, 1), inizio = lunedi(primo);
+    const settimane = Math.ceil(((primo.getDay() + 6) % 7 + new Date(anno, mese + 1, 0).getDate()) / 7);   // settimane intere
+    titolo = fmt(primo, { month: "long", year: "numeric" });
+    corpo = `<div class="eh-cal">${GS.map((g) => `<div class="gs">${esc(g)}</div>`).join("")}${[...Array(settimane * 7)].map((_, k) => {
+      const d = new Date(inizio); d.setDate(inizio.getDate() + k); return cella(d, d.getMonth() !== mese); }).join("")}</div>`;
+  }
+  const viste = interruttoreHTML("vistacal", [t("cal_settimana"), t("cal_mese"), t("cal_anno")], ["settimana", "mese", "anno"].indexOf(vista), { tre: true });
+  const flag = `<button class="interruttore-rd${ST.soloMie ? " acceso" : ""}" data-solo-mie><span>${esc(t("cal_solo_mie"))}</span><span class="levetta"></span></button>`;
+  return `<section class="scheda eh-calendario">${testa({ icona: "calendario", titolo: titolo.charAt(0).toUpperCase() + titolo.slice(1),
+      destra: `${flag}${viste}<div class="eh-mese-testa"><button class="pul medio" data-mese="-1" data-tip="${esc(t("cal_prima"))}">${ic("indietro")}</button><button class="pul medio" data-mese="0"><span>${esc(t("cal_oggi"))}</span></button><button class="pul medio" data-mese="1" data-tip="${esc(t("cal_dopo"))}">${ic("avanti")}</button></div>` })}
+    <div class="corpo">${corpo}</div></section>`;
+}
+// clic su una fiera del calendario: la propria si apre; quella di un altro mostra la scheda e chiede se partecipare
+async function apriDalCalendario(id) {
+  nascondiSuggerimento();
+  const { idMie } = fiereCal();
+  if (idMie.has(id)) { apriRichiesta(id); return; }
+  const x = ((ST.io && ST.io.tutte) || []).find((r) => r.id === id);
+  if (!x) return;
+  const luogo = [x.citta, x.paese].filter(Boolean).join(", ");
+  const persone = [x.organizza].concat(x.partecipanti || []).filter(Boolean).join(", ");
+  const testo = [periodo(x.inizio, x.fine), luogo, [x.padiglione, x.stand].filter(Boolean).join(" "), t("persone", { nomi: persone })]
+    .filter(Boolean).join(" · ");
+  if (!await domanda([x.fiera, x.edizione].filter(Boolean).join(" "), testo, t("partecipa"))) return;
+  avvisoBarra(t("partecipa_corso"));          // qui non c'è un pulsante che lavora: lo dice la barra (REGOLE 19)
+  partecipa(id, null);
+}
+
 // "Tutte le fiere": di ogni fiera attiva solo la scheda riassuntiva (date, luogo, stand, chi ci lavora) e "Partecipa";
 // documenti, materiali e commenti si vedono dopo, quando la fiera è fra le proprie. Quelle già sue si aprono col clic.
 function carteTutte() {
@@ -307,7 +406,7 @@ function disegnaRichiesta(d) {
   const f = d.fiera, a = d.allestitore;
   const lingue = ORDINE_LINGUE.map((l) => `<span class="sigla ${d.grafiche.lingue.includes(l) ? "l-acc scelta" : "spenta"}" data-lingua-g="${l}">${esc(LINGUE[l]._nome)}</span>`).join("");
   setHTML($("#p-richiesta"), `<div class="eh-contenuto">
-    <button class="pul medio eh-indietro" id="b-indietro">${ic("indietro")}<span>${esc(t("indietro"))}</span></button>
+    <button class="pul medio eh-indietro" id="b-indietro">${ic("indietro")}<span>${esc(t(ST.vista === "mie" ? "indietro" : TITOLI_VISTE[ST.vista]))}</span></button>
     <div class="intestazione" id="i-richiesta"></div>
     <div class="eh-colonne">
       <div class="colonna">
@@ -658,7 +757,8 @@ async function partecipa(id, b) {
       ST.io.tutte = (ST.io.tutte || []).map((r) => (r.id === id ? Object.assign({}, r, { tua: true }) : r));
     } else applicaIo(await chiama("io", { completo: true }));
     segnaVisto(id, (ST.dettagli[id] || {}).eventi);
-    ST.vista = "mie"; disegnaElenco();
+    if (ST.vista === "tutte") ST.vista = "mie";      // dal calendario si torna al calendario
+    disegnaElenco();
     await apriRichiesta(id);
     aggiornaElenco();
   } catch (e) {
@@ -785,7 +885,27 @@ function lega() {
     const la = el.closest("[data-lascia]"); if (la) { lasciaFiera(la.dataset.lascia); return; }
     const pa = el.closest("[data-partecipa]"); if (pa) { partecipa(pa.dataset.partecipa, pa); return; }
     const vi = el.closest('[data-int="vista"] button');
-    if (vi) { const i = scegliInterruttore(vi.closest("[data-int]"), vi); if (i !== null) { ST.vista = i === 1 ? "tutte" : "mie"; setTimeout(() => { disegnaElenco(); disegnaBarra(); }, 180); } return; }
+    if (vi) { const i = scegliInterruttore(vi.closest("[data-int]"), vi); if (i !== null) { ST.vista = VISTE[i]; setTimeout(() => { disegnaElenco(); disegnaBarra(); }, 180); } return; }
+    // calendario: vista (Settimana/Mese/Anno), frecce (di una settimana, un mese o un anno), Oggi, mese piccolo, flag
+    const vc = el.closest('[data-int="vistacal"] button');
+    if (vc) { const i = scegliInterruttore(vc.closest("[data-int]"), vc); if (i !== null) { ST.calVista = ["settimana", "mese", "anno"][i];
+      const d = new Date(); if (i === 0 && ST.calMese.getFullYear() === d.getFullYear() && ST.calMese.getMonth() === d.getMonth()) ST.calMese = d;
+      setTimeout(disegnaElenco, 140); } return; }
+    const vm = el.closest("[data-vai-mese]");
+    if (vm) { nascondiSuggerimento(); ST.calMese = new Date(ST.calMese.getFullYear(), +vm.dataset.vaiMese, 1); ST.calVista = "mese"; disegnaElenco(); return; }
+    const ms = el.closest("[data-mese]");
+    if (ms) {
+      const n = +ms.dataset.mese, v = ST.calVista, r = ST.calMese;
+      ST.calMese = !n ? new Date() : v === "settimana" ? new Date(r.getFullYear(), r.getMonth(), r.getDate() + 7 * n)
+        : v === "anno" ? new Date(r.getFullYear() + n, r.getMonth(), 1) : new Date(r.getFullYear(), r.getMonth() + n, 1);
+      disegnaElenco(); return;
+    }
+    if (el.closest("[data-solo-mie]")) {
+      ST.soloMie = !ST.soloMie;
+      try { localStorage.setItem(SOLO_MIE_LS, ST.soloMie ? "1" : ""); } catch (e) { /* solo comodità */ }
+      disegnaElenco(); return;
+    }
+    const cl = el.closest("[data-cal]"); if (cl) { apriDalCalendario(cl.dataset.cal); return; }
     const carta = el.closest("[data-apri]"); if (carta) { apriRichiesta(carta.dataset.apri); return; }
     if (el.closest("#b-indietro")) { tornaElenco(); return; }
     if (el.closest("#b-entra")) { entraConLink(); return; }
@@ -905,6 +1025,7 @@ async function avvio() {
   try { salvata = localStorage.getItem(LINGUA_LS); } catch (e) { /* solo comodità */ }
   LINGUA = LINGUE[salvata] ? salvata : linguaDelBrowser();
   document.documentElement.lang = LINGUA;
+  try { ST.soloMie = localStorage.getItem(SOLO_MIE_LS) === "1"; } catch (e) { /* solo comodità */ }
   adatta();
   window.addEventListener("resize", adatta);
   legaTendine();
