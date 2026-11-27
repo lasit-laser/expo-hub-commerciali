@@ -295,11 +295,11 @@ const OBBLIGATORI = ["fiera.nome", "fiera.edizione", "fiera.citta", "fiera.paese
 const ETICHETTE = { nome: "c_nome", edizione: "c_edizione", citta: "c_citta", paese: "c_paese", inizio: "c_inizio", fine: "c_fine" };
 const nomiCampi = (campi) => campi.map((k) => t(ETICHETTE[String(k).replace(/^fiera\./, "")] || "c_nome")).join(", ");
 const mancanti = (d) => OBBLIGATORI.filter((k) => { const [a, b] = k.split("."); return !String(d[a][b] || "").trim(); });
-const campo = (k, et, val, { tipo = "text", s = "s2", area = false, segnaposto = "" } = {}) => {
+const campo = (k, et, val, { tipo = "text", s = "s2", area = false, segnaposto = "", min = "" } = {}) => {
   const obbl = OBBLIGATORI.includes(k);
   return `<label class="eh-campo ${s}" data-fc="${k}"><span class="et">${esc(et)}${obbl ? `<b data-tip="${esc(t("obbligatorio"))}">*</b>` : ""}</span>` +
   (area ? `<span class="campo eh-area"><textarea data-f="${k}" placeholder="${esc(segnaposto)}" spellcheck="true">${esc(val)}</textarea></span>`
-    : `<span class="campo"><input data-f="${k}" type="${tipo}" value="${esc(val)}" spellcheck="false" autocomplete="off"></span>`) + `</label>`;
+    : `<span class="campo"><input data-f="${k}" type="${tipo}" value="${esc(val)}"${min ? ` min="${esc(min)}"` : ""} spellcheck="false" autocomplete="off"></span>`) + `</label>`;
 };
 
 function materialeHTML(m) {
@@ -438,7 +438,7 @@ function disegnaRichiesta(d) {
             ${campo("fiera.citta", t("c_citta"), f.citta, { s: "s3" })}
             ${campo("fiera.paese", t("c_paese"), f.paese, { s: "s3" })}
             ${campo("fiera.inizio", t("c_inizio"), f.inizio, { tipo: "date", s: "s2" })}
-            ${campo("fiera.fine", t("c_fine"), f.fine, { tipo: "date", s: "s2" })}
+            ${campo("fiera.fine", t("c_fine"), f.fine, { tipo: "date", s: "s2", min: f.inizio })}
             ${campo("fiera.padiglione", t("c_padiglione"), f.padiglione, { s: "s1" })}
             ${campo("fiera.stand", t("c_stand"), f.stand, { s: "s1" })}
             ${campo("fiera.sito", t("c_sito"), f.sito, { s: "s6", tipo: "url" })}
@@ -999,7 +999,11 @@ function lega() {
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.id === "link-personale") entraConLink(); });
   document.addEventListener("input", (e) => {
-    if (e.target.id === "link-personale") { const er = $("#errore-link"); if (er) er.hidden = true; } if (e.target.closest("#p-richiesta") && e.target.id !== "commento") { toccato(e.target); aggiornaLatoPresto(); } });
+    if (e.target.id === "link-personale") { const er = $("#errore-link"); if (er) er.hidden = true; }
+    // la data di fine non può venire prima dell'inizio: col "min" il calendario della fine si apre già sul mese
+    // dell'inizio, senza scorrere i mesi (utente 2026-11-27)
+    if (e.target.dataset && e.target.dataset.f === "fiera.inizio") { const fi = $('#p-richiesta [data-f="fiera.fine"]'); if (fi) fi.min = e.target.value; }
+    if (e.target.closest("#p-richiesta") && e.target.id !== "commento") { toccato(e.target); aggiornaLatoPresto(); } });
   $("#scelta-file").addEventListener("change", (e) => {
     const files = Array.from(e.target.files || []); e.target.value = "";
     if (files.length) aggiungiFile(files, _allegaA ? "materiale" : "allestitore", _allegaA || "");
