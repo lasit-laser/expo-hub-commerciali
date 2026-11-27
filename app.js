@@ -20,23 +20,16 @@ const LETTURE = ["io", "leggi", "firma"];
 const ATTESE = { salva: 30000, inizia_file: 30000, leggi_documenti: 300000 };     // Gemini legge i documenti: anche minuti
 const TENTATIVI = { leggi_documenti: 1 };                                          // (una lettura con Gemini costa: una volta)
 const nuovoOp = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/-/g, "");
+// VELOCITÀ (2026-11-27, utente: "ci ha messo parecchi secondi"): le chiamate appese di Google erano la causa principale.
+// Ora, se una chiamata non risponde entro `SOGLIA` (letture 4 s, scritture 8 s; di solito rispondono in 1,5-3 s), ne
+// parte SUBITO una seconda uguale in parallelo e vince la prima che risponde (le scritture hanno l'op: nessun doppione).
+const SOGLIA = { leggi_documenti: 600000 };
 async function chiama(azione, dati = {}) {
-  let r, j;
   const lettura = LETTURE.includes(azione);
   const corpo = JSON.stringify(Object.assign({ azione, chiave: ST.chiave }, lettura || dati.op ? {} : { op: nuovoOp() }, dati));
   const prove = TENTATIVI[azione] || 4, attesa = ATTESE[azione] || (lettura ? 15000 : 30000);
-  for (let n = 1; ; n++) {
-    const stop = new AbortController(), timer = setTimeout(() => stop.abort(), attesa);
-    try {
-      // corpo testo semplice: niente "preflight", Apps Script lo accetta da qualsiasi origine
-      r = await fetch(EXPO.motore, { method: "POST", body: corpo, signal: stop.signal });
-      j = await r.json();
-      break;
-    } catch (e) {
-      if (n >= prove) { const err = new Error(t("err_rete")); err.codice = "rete"; throw err; }
-      await new Promise((ok) => setTimeout(ok, 800 * n));
-    } finally { clearTimeout(timer); }
-  }
+  const soglia = SOGLIA[azione] || (lettura ? 4000 : 8000);
+  const j = await gara(corpo, attesa, soglia, prove);
   if (!j || typeof j !== "object") { const err = new Error(t("err_rete")); err.codice = "rete"; throw err; }
   if (!j.ok) {
     const tradotti = { accesso: "err_accesso", date_ordine: "err_date_ordine", lettura_limite: "lettura_limite" };
@@ -48,6 +41,36 @@ async function chiama(azione, dati = {}) {
   // riaprendo la fiera si vede subito com'è ora, non com'era all'ultima lettura dell'elenco
   if (azione === "leggi" && j.richiesta) (ST.dettagli = ST.dettagli || {})[j.richiesta.id] = { richiesta: j.richiesta, eventi: j.eventi };
   return j;
+}
+// La stessa richiesta al motore, fino a `max` copie: una nuova parte se le altre tacciono da `soglia` ms o se una
+// fallisce; ognuna si interrompe dopo `attesa` ms. Vince la prima risposta; le altre si fermano.
+function gara(corpo, attesa, soglia, max) {
+  return new Promise((ok, ko) => {
+    let partiti = 0, falliti = 0, fatto = false, scorta = null;
+    const tutte = [];
+    const parti = () => {
+      if (fatto || partiti >= max) return;
+      partiti++;
+      const c = new AbortController(), timer = setTimeout(() => c.abort(), attesa);
+      tutte.push(c);
+      clearTimeout(scorta); scorta = setTimeout(parti, soglia);         // se anche questa tace: un'altra in parallelo
+      // corpo testo semplice: niente "preflight", Apps Script lo accetta da qualsiasi origine
+      fetch(EXPO.motore, { method: "POST", body: corpo, signal: c.signal }).then((r) => r.json()).then((j) => {
+        clearTimeout(timer);
+        if (fatto) return;
+        fatto = true; clearTimeout(scorta);
+        tutte.forEach((x) => { if (x !== c) x.abort(); });
+        ok(j);
+      }).catch(() => {
+        clearTimeout(timer);
+        if (fatto) return;
+        falliti++;
+        if (partiti < max) { clearTimeout(scorta); scorta = setTimeout(parti, 500); }
+        else if (falliti >= partiti) { fatto = true; clearTimeout(scorta); const err = new Error(t("err_rete")); err.codice = "rete"; ko(err); }
+      });
+    };
+    parti();
+  });
 }
 function avvisaErrore(e) {
   dialogo({ tipo: "errore", titolo: e.codice === "accesso" ? t("err_accesso_titolo") : t("err_titolo"), testo: e.message, si: t("ok") });
@@ -880,6 +903,7 @@ let _firma = null, _controllo = false, _rileggi = false;   // _rileggi: al pross
 function applicaIo(j) {
   ST.io = j; ST.dettagli = j.dettagli || {};
   if (j.firma) _firma = j.firma;
+  if (j.dettagli) salvaIo(j);                    // per aprire SUBITO la prossima volta (ioSalvato)
   inizializzaVisti(); disegnaElenco(); disegnaBarra();
 }
 // LIVE (utente 2026-11-26): UNA chiamata sola, `io` con la firma che la pagina conosce; se nei fogli non è cambiato
@@ -903,7 +927,13 @@ async function controllaNovita() {
       moduloDeiColleghi();
       aggiornaFile();
     }
-  } catch (e) { if (forza) _rileggi = true; /* si riprova al giro dopo */ }
+  } catch (e) {
+    if (e.codice === "accesso") {                  // link spento o rifatto: via le fiere salvate, si chiede il link
+      try { localStorage.removeItem(IO_LS()); } catch (e2) { /* niente */ }
+      ST.io = null; mostraAccesso(); return;
+    }
+    if (forza) _rileggi = true; /* si riprova al giro dopo */
+  }
   finally { _controllo = false; }
 }
 // Un collega della fiera condivisa ha salvato: se qui non c'è niente da salvare e non si sta scrivendo in un campo, il
@@ -1227,6 +1257,11 @@ async function avvio() {
   lega();
   disegnaBarra();
   if (!ST.chiave) { mostraAccesso(); return pronto(); }
+  // VELOCITÀ (2026-11-27, utente: "la finestra si apre subito ma i contenuti ci mettono molti secondi"): si mostrano
+  // SUBITO le fiere salvate su questo dispositivo l'ultima volta, poi il controllo delle novità le aggiorna (con la
+  // firma: se non è cambiato niente il motore risponde "uguale" in un attimo)
+  const memo = ioSalvato();
+  if (memo) { avviaConIo(memo); pronto(); controllaNovita(); return; }
   try {
     avviaConIo(await chiama("io", { completo: true }));
     controllaNovita();               // la prima firma: da qui in poi si rilegge solo se cambia
@@ -1236,9 +1271,21 @@ async function avvio() {
   }
   pronto();
 }
+// l'ultimo `io` completo, salvato su questo dispositivo (uno per chiave: più commerciali sullo stesso PC non si mescolano)
+const IO_LS = () => "expohub_io_" + String(ST.chiave || "").slice(-12);
+function ioSalvato() {
+  try { const j = JSON.parse(localStorage.getItem(IO_LS()) || "null"); return j && j.ok && j.commerciale ? j : null; } catch (e) { return null; }
+}
+let _salvaIo = null;
+function salvaIo(j) {
+  clearTimeout(_salvaIo);
+  _salvaIo = setTimeout(() => {
+    try { const s = JSON.stringify(j); if (s.length < 3000000) localStorage.setItem(IO_LS(), s); } catch (e) { /* solo comodità */ }
+  }, 300);
+}
 // il primo `io` arrivato (all'avvio o, se allora non c'era rete, più tardi dal controllo delle novità)
 function avviaConIo(j) {
-  ST.io = j; ST.dettagli = j.dettagli || {}; _firma = j.firma || null; inizializzaVisti();
+  ST.io = j; ST.dettagli = j.dettagli || {}; _firma = j.firma || null; inizializzaVisti(); salvaIo(j);
   let salvata = null;
   try { salvata = localStorage.getItem(LINGUA_LS); } catch (e) { /* solo comodità */ }
   if (!salvata && j.commerciale && LINGUE[j.commerciale.lingua]) { LINGUA = j.commerciale.lingua; document.documentElement.lang = LINGUA; }
