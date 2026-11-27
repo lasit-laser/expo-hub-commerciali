@@ -151,8 +151,7 @@ function disegnaElenco() {
       </div></article>`;
   }).join("");
   const vuoto = `<section class="scheda eh-vuoto">${testa({ icona: "info", titolo: t("vuoto_titolo") })}
-    <div class="corpo"><div>${esc(t("vuoto_testo"))}</div>
-    <button class="pul principale" data-nuova>${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div></section>`;
+    <div class="corpo"><div>${esc(t("vuoto_testo"))}</div></div></section>`;   // "Nuova richiesta" solo in alto a destra (utente 2026-11-27: era doppio)
   // "Le mie fiere" / "Tutte le fiere" (utente 2026-11-27): il selettore a destra sulla riga del titolo
   // + "Calendario" (utente 2026-11-27): il calendario come quello del marketing, con tutte le fiere o solo le proprie
   const tutteLe = ST.vista === "tutte", cal = ST.vista === "calendario";
