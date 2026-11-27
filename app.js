@@ -6,6 +6,7 @@ const TIPI = ["stand", "rollup", "totem", "banco", "video", "brochure", "catalog
 const UNITA = ["mm", "cm", "m", "px"];
 const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], caricamenti: [], salvato: "", invio: false, pagina: "elenco",
   letti: {}, lettura: null,        // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
+  inAttesa: [],                    // commenti propri già mostrati, non ancora restituiti dal motore (vedi commenta)
   vista: "mie",                    // "mie" (Le mie fiere), "tutte" (Tutte le fiere) o "calendario" (utente 2026-11-27)
   calVista: "mese", calMese: new Date(), soloMie: false };   // calendario: vista, giorno di riferimento, "Solo le mie fiere"
 let _installa = null;              // l'invito del browser a installare l'app, se c'è (vedi installaApp in fondo)
@@ -722,7 +723,7 @@ async function apriRichiesta(id) {
       // il dettaglio è già arrivato con l'elenco (io completo): si apre SUBITO; dal motore (3-4 s) solo se manca
       const pronto = ST.dettagli && ST.dettagli[id];
       const j = pronto ? JSON.parse(JSON.stringify(pronto)) : await chiama("leggi", { id });
-      ST.richiesta = j.richiesta; ST.eventi = j.eventi;
+      ST.richiesta = j.richiesta; ST.eventi = conAttesa(id, j.eventi);
       ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate 3 s (programmaLetta), poi lette
       segnaVisto(id, ST.eventi);
     } else { ST.richiesta = { id: null, stato: "inviata", dati: vuota() }; ST.eventi = []; }
@@ -826,7 +827,7 @@ async function controllaNovita() {
     const id = ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id;
     const d = id && ST.dettagli[id];
     if (d) {
-      ST.eventi = d.eventi; ST.richiesta.stato = d.richiesta.stato; ST.richiesta.aggiornata = d.richiesta.aggiornata;
+      ST.eventi = conAttesa(id, d.eventi); ST.richiesta.stato = d.richiesta.stato; ST.richiesta.aggiornata = d.richiesta.aggiornata;
       ST.richiesta.persone = d.richiesta.persone;   // chi è entrato o uscito nel frattempo
       segnaVisto(id, ST.eventi);                  // arrivate mentre la si guarda: segnate ora, viste all'uscita
       aggiornaFile();
@@ -881,16 +882,42 @@ async function salva() {
   } catch (e) { avvisaErrore(e); }
   finally { ST.invio = false; aggiornaLato(); }
 }
+// Il commento compare SUBITO in cronologia e il campo si svuota (utente 2026-11-27: "ci mette qualche secondo"; REGOLE
+// 19): prima si aspettavano salvataggio (con le traduzioni) e rilettura, 6-9 s. Finché il motore non lo restituisce, il
+// commento resta "in attesa" e ogni rilettura lo tiene sullo schermo; se il motore dice di no, il testo torna nel campo.
 async function commenta() {
   const el = $("#commento"), testo = el.value.trim();
-  if (!testo) return;
+  if (!testo || !ST.richiesta || !ST.richiesta.id) return;
+  const id = ST.richiesta.id;
+  const locale = { id: "locale-" + Date.now(), richiesta: id, quando: new Date().toISOString(),
+    chi: (ST.io && ST.io.commerciale.nome) || "", tipo: "commento", testo };
+  ST.inAttesa.push(locale);
+  el.value = "";
+  ST.eventi = ST.eventi.concat([locale]);
+  aggiornaLato();
   try {
-    await chiama("commento", { id: ST.richiesta.id, testo });
-    el.value = "";
-    const j = await chiama("leggi", { id: ST.richiesta.id });
-    ST.eventi = j.eventi; ST.richiesta.aggiornata = j.richiesta.aggiornata;
-    aggiornaLato();
-  } catch (e) { avvisaErrore(e); }
+    await chiama("commento", { id, testo });
+    const j = await chiama("leggi", { id });
+    if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id === id) {
+      ST.eventi = conAttesa(id, j.eventi); ST.richiesta.aggiornata = j.richiesta.aggiornata; aggiornaLato();
+    }
+  } catch (e) {
+    ST.inAttesa = ST.inAttesa.filter((x) => x !== locale);
+    if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id === id) {
+      ST.eventi = ST.eventi.filter((x) => x !== locale);
+      const c = $("#commento"); if (c && !c.value.trim()) c.value = testo;
+      aggiornaLato();
+    }
+    avvisaErrore(e);
+  }
+}
+// gli eventi arrivati dal motore + i commenti propri ancora in attesa (quelli che il motore ha già restituito escono)
+function conAttesa(id, eventi) {
+  const arrivato = (p) => eventi.some((e) => e.tipo === "commento" && e.chi === p.chi && e.testo === p.testo
+    && Date.parse(e.quando) >= Date.parse(p.quando) - 300000);
+  ST.inAttesa = ST.inAttesa.filter((p) => p.richiesta !== id || !arrivato(p));
+  const resto = ST.inAttesa.filter((p) => p.richiesta === id);
+  return resto.length ? eventi.concat(resto) : eventi;
 }
 
 /* ---------------------------------------------------------------------------------------- eventi della pagina */
