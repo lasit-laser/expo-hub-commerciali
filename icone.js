@@ -32,6 +32,9 @@ const SVG_ICONE = {
   scadenza: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4.5l3 2M9 2.5h6"/>',
   stand: '<path d="M3 9l9-5 9 5v10l-9 2-9-2z"/><path d="M12 4v17"/>',
   letto: '<path d="M12 3.5l1.9 5 5 1.9-5 1.9-1.9 5-1.9-5-5-1.9 5-1.9z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
+  // fiere condivise (2026-11-27): chi partecipa, ed esci dalla fiera
+  gruppo: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.9-3.4 3.4-5 6.5-5s5.6 1.6 6.5 5"/><path d="M15.5 4.8a3.5 3.5 0 0 1 0 6.4M17.8 15.3c1.9.7 3.2 2.3 3.7 4.7"/>',
+  esci: '<path d="M13 4H5v16h8"/><path d="M10 12h10M16 8l4 4-4 4"/>',
 };
 function ic(nome) {
   const d = SVG_ICONE[nome];

@@ -5,7 +5,8 @@ const CHIAVE_LS = "expohub_chiave", LINGUA_LS = "expohub_lingua";
 const TIPI = ["stand", "rollup", "totem", "banco", "video", "brochure", "catalogo", "inviti", "gadget", "altro"];
 const UNITA = ["mm", "cm", "m", "px"];
 const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], caricamenti: [], salvato: "", invio: false, pagina: "elenco",
-  letti: {}, lettura: null };      // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
+  letti: {}, lettura: null,        // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
+  vista: "mie" };                  // "mie" (Le mie fiere) o "tutte" (Tutte le fiere, utente 2026-11-27)
 
 /* ---------------------------------------------------------------------------------------- motore */
 async function chiama(azione, dati = {}) {
@@ -66,7 +67,7 @@ function disegnaBarra() {
   const dove = ST.pagina === "richiesta" ? `<span class="c-tenue">›</span><b>${esc(nomeRichiesta())}</b>` : "";
   setHTML($("#barra"), `
     <div class="eh-marchio"><img class="segno" src="icona.svg" alt=""><b>EXPO HUB</b></div>
-    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t("titolo_elenco"))}</span>${dove}</div>
+    <div class="briciole"><span class="c-tenue">LASIT</span><span class="c-tenue">›</span><span class="${dove ? "c-tenue" : ""}">${esc(t(ST.vista === "tutte" && !dove ? "titolo_tutte" : "titolo_elenco"))}</span>${dove}</div>
     <div class="barra-destra">
       <span class="letto" id="avviso-barra"></span>
       ${temaHTML()}
@@ -101,7 +102,8 @@ function cambiaLingua(l) {
   LINGUA = l;
   document.documentElement.lang = l;
   try { localStorage.setItem(LINGUA_LS, l); } catch (e) { /* solo comodità */ }
-  if (ST.chiave) chiama("lingua", { lingua: l }).catch(() => {});
+  // i commenti tradotti arrivano nella lingua scelta: salvata la lingua, si rilegge tutto (anche la fiera aperta)
+  if (ST.chiave) chiama("lingua", { lingua: l }).then(() => { _rileggi = true; controllaNovita(); }).catch(() => {});
   disegnaBarra();
   disegnaElenco();
   if (bozza) disegnaRichiesta(bozza);
@@ -123,12 +125,16 @@ function disegnaElenco() {
   const carte = r.map((x) => {
     const luogo = [x.citta, x.paese].filter(Boolean).join(", ");
     const manca = (x.manca || []).map((m) => sigla({ l: "warn", t: t("manca_" + m) })).join("");
+    // fiere condivise (2026-11-27): chi l'ha creata la elimina (cestino), chi partecipa ne esce
+    const via = x.mia === false ? `<button class="eh-elimina" data-lascia="${esc(x.id)}" title="${esc(t("lascia"))}">${ic("esci")}</button>`
+      : `<button class="eh-elimina" data-elimina="${esc(x.id)}" title="${esc(t("elimina"))}">${ic("cestino")}</button>`;
     return `<article class="scheda eh-carta" data-apri="${esc(x.id)}">
       ${testa({ icona: "fiera", titolo: [x.fiera, x.edizione].filter(Boolean).join(" "),
-        destra: pallinoNovita(novitaDi(x.id, (ST.dettagli[x.id] || {}).eventi)) + pillolaStato(x.stato) + `<button class="eh-elimina" data-elimina="${esc(x.id)}" title="${esc(t("elimina"))}">${ic("cestino")}</button>` })}
+        destra: pallinoNovita(novitaDi(x.id, (ST.dettagli[x.id] || {}).eventi)) + pillolaStato(x.stato) + via })}
       <div class="corpo">
         <div class="eh-riga">${ic("calendario")}<span>${esc([periodo(x.inizio, x.fine), luogo].filter(Boolean).join(" · ") || "—")}</span></div>
         <div class="eh-riga">${ic("stand")}<span>${esc([x.padiglione, x.stand].filter(Boolean).join(" · ") || "—")}</span></div>
+        ${(x.persone || []).length > 1 ? `<div class="eh-riga">${ic("gruppo")}<span>${esc(t("persone", { nomi: x.persone.join(", ") }))}</span></div>` : ""}
         <div class="eh-riga">${ic("materiale")}<span>${esc(t("materiali_n", { n: x.materiali }))} · ${esc(t("documenti_n", { n: x.documenti }))}</span></div>
         ${x.scadenza ? `<div class="eh-riga">${ic("scadenza")}<span>${esc(t("scadenza_il", { data: data(x.scadenza) }))}</span></div>` : ""}
         ${x.da_rivedere ? `<div class="eh-pillole">${sigla({ l: "acc", t: t("da_rivedere_n", { n: x.da_rivedere }) })}</div>` : ""}
@@ -139,11 +145,33 @@ function disegnaElenco() {
   const vuoto = `<section class="scheda eh-vuoto">${testa({ icona: "info", titolo: t("vuoto_titolo") })}
     <div class="corpo"><div>${esc(t("vuoto_testo"))}</div>
     <button class="pul principale" data-nuova>${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div></section>`;
+  // "Le mie fiere" / "Tutte le fiere" (utente 2026-11-27): il selettore a destra sulla riga del titolo
+  const tutteLe = ST.vista === "tutte";
+  const vista = `<div class="eh-vista">${interruttoreHTML("vista", [t("titolo_elenco"), t("titolo_tutte")], tutteLe ? 1 : 0)}</div>`;
   morph($("#p-elenco"), `<div class="eh-contenuto">
     <div class="intestazione"><div class="titoli"><div class="occhiello">${esc(t("occhiello_elenco"))}</div>
-      <div class="eh-titolo-riga"><h1>${esc(t("titolo_elenco"))}</h1>${tutte.length ? `<div class="eh-filtri">${filtri}</div>` : ""}</div>
+      <div class="eh-titolo-riga"><h1>${esc(t(tutteLe ? "titolo_tutte" : "titolo_elenco"))}</h1>${!tutteLe && tutte.length ? `<div class="eh-filtri">${filtri}</div>` : ""}${vista}</div>
       <div class="frase"> </div></div></div>
-    <div class="eh-griglia">${carte || (ST.filtro ? `<div class="eh-nessuna">${esc(t("filtro_nessuna"))}</div>` : vuoto)}</div></div>`);
+    <div class="eh-griglia">${tutteLe ? carteTutte() : carte || (ST.filtro ? `<div class="eh-nessuna">${esc(t("filtro_nessuna"))}</div>` : vuoto)}</div></div>`);
+}
+// "Tutte le fiere": di ogni fiera attiva solo la scheda riassuntiva (date, luogo, stand, chi ci lavora) e "Partecipa";
+// documenti, materiali e commenti si vedono dopo, quando la fiera è fra le proprie. Quelle già sue si aprono col clic.
+function carteTutte() {
+  const tutte = (ST.io && ST.io.tutte) || [];
+  if (!tutte.length) return `<div class="eh-nessuna">${esc(t("tutte_vuoto"))}</div>`;
+  return tutte.map((x) => {
+    const luogo = [x.citta, x.paese].filter(Boolean).join(", ");
+    const persone = [x.organizza].concat(x.partecipanti || []).filter(Boolean);
+    return `<article class="scheda eh-carta${x.tua ? "" : " eh-ferma"}"${x.tua ? ` data-apri="${esc(x.id)}"` : ""}>
+      ${testa({ icona: "fiera", titolo: [x.fiera, x.edizione].filter(Boolean).join(" "), destra: pillolaStato(x.stato) })}
+      <div class="corpo">
+        <div class="eh-riga">${ic("calendario")}<span>${esc([periodo(x.inizio, x.fine), luogo].filter(Boolean).join(" · ") || "—")}</span></div>
+        <div class="eh-riga">${ic("stand")}<span>${esc([x.padiglione, x.stand].filter(Boolean).join(" · ") || "—")}</span></div>
+        <div class="eh-riga">${ic("gruppo")}<span>${esc(t("persone", { nomi: persone.join(", ") }))}</span></div>
+        <div class="eh-carta-piede">${x.tua ? sigla({ l: "ok", t: t("tutte_gia") })
+          : `<button class="pul principale medio" data-partecipa="${esc(x.id)}">${ic("aggiungi")}<span>${esc(t("partecipa"))}</span></button>`}</div>
+      </div></article>`;
+  }).join("");
 }
 
 /* ---------------------------------------------------------------------------------------- richiesta */
@@ -205,7 +233,9 @@ const inCronologia = (e) => e.tipo !== "stato" && !(e.tipo === "file" && e.categ
 const VISTI_LS = "expohub_visti";
 function visti() { try { return JSON.parse(localStorage.getItem(VISTI_LS) || "null"); } catch (e) { return null; } }
 function salvaVisti(v) { try { localStorage.setItem(VISTI_LS, JSON.stringify(v)); } catch (e) { /* solo comodità */ } }
-const daMarketing = (e) => (e.chi === "marketing" || e.chi === "Marketing") && (e.tipo === "commento" || e.tipo === "versione") && inCronologia(e);
+// novità = dal marketing o, nelle fiere condivise (2026-11-27), dagli altri commerciali: commenti, versioni, risposte
+const daMarketing = (e) => e.chi !== ((ST.io && ST.io.commerciale && ST.io.commerciale.nome) || "")
+  && (e.tipo === "commento" || e.tipo === "versione" || e.tipo === "revisione") && inCronologia(e);
 const ultimoEvento = (eventi) => (eventi || []).reduce((m, e) => (String(e.quando) > m ? String(e.quando) : m), "");
 function inizializzaVisti() {
   if (visti()) return;
@@ -531,6 +561,7 @@ function aggiornaLato() {
   morph($("#pannello-stato"), `${testa({ icona: "info", titolo: t("sez_stato"), destra: nuova ? "" : pillolaStato(r.stato) })}
     <div class="corpo">
       ${nuova ? "" : `<div class="eh-riga tenue"><span>${esc(t("inviata_il", { data: data(r.creata) }))} · ${esc(t("aggiornata_il", { data: data(r.aggiornata) }))}</span></div>`}
+      ${(r.persone || []).length > 1 ? `<div class="eh-riga">${ic("gruppo")}<span>${esc(t("persone", { nomi: r.persone.join(", ") }))}</span></div>` : ""}
       <div class="eh-pillole"><span class="et">${esc(t("cosa_manca"))}</span>${m.length ? m.map((x) => sigla({ l: "warn", t: t("manca_" + x) })).join("") : sigla({ l: "ok", t: t("niente_manca") })}</div>
       <button class="pul principale${ST.invio ? " occupato" : ""}" id="b-salva" ${ST.invio || (!nuova && !sporco) ? "disabled" : ""}>${ic(nuova ? "invia" : "salva")}<span>${esc(ST.invio ? t("salvataggio") : nuova ? t("invia") : t("salva"))}</span></button>
       ${nuova ? "" : `<div class="eh-salvato${sporco ? " da-salvare" : ""}">${esc(sporco ? t("non_salvate") : t("salvate"))}</div>`}
@@ -543,9 +574,11 @@ function aggiornaLato() {
       : e.tipo === "file" ? t("ev_file", { nome: e.file_nome }) : e.tipo === "stato" ? t("ev_stato", { stato: t("stato_" + e.testo) })
       : e.tipo === "versione" ? t("ev_versione", { n: e.versione, mat: nomeMat(e.materiale) }) + (e.testo ? `\n${e.testo}` : "")
       : e.tipo === "revisione" ? t(e.esito === "approvata" ? "ev_rev_ok" : "ev_rev_mod", { n: e.versione, mat: nomeMat(e.materiale) }) + (e.testo ? `\n${e.testo}` : "")
+      : e.tipo === "partecipa" ? t("ev_partecipa") : e.tipo === "uscita" ? t("ev_uscita")
       : e.testo;
+    // "tradotto": il testo arriva nella lingua di chi legge (motore, testoPer_); l'originale lo vede chi l'ha scritto
     return `<div class="eh-evento ${e.tipo}${marketing ? " marketing" : ""}${idNuovi.has(e.id) ? " nuovo" : ""}"><span class="avatar piccolo">${esc(marketing ? "M" : iniziali(e.chi))}</span>
-      <div><div class="chi"><b>${esc(marketing ? t("marketing") : e.chi)}</b>${esc(data(e.quando, true))}</div><div class="cosa">${esc(cosa)}</div></div></div>`;
+      <div><div class="chi"><b>${esc(marketing ? t("marketing") : e.chi)}</b>${esc(data(e.quando, true))}${e.tradotto ? `<span class="eh-tradotto">· ${esc(t("tradotto"))}</span>` : ""}</div><div class="cosa">${esc(cosa)}</div></div></div>`;
   }).join("");
   const bozzaCommento = $("#commento") ? $("#commento").value : "";
   morph($("#pannello-cronologia"), `${testa({ icona: "commento", titolo: t("sez_cronologia"), destra: pillolaNovita(nuovi) })}
@@ -590,12 +623,48 @@ async function eliminaFiera(id) {
   const x = ((ST.io && ST.io.richieste) || []).find((r) => r.id === id);
   if (!x) return;
   const nome = [x.fiera, x.edizione].filter(Boolean).join(" ");
-  if (!await domanda(t("elimina_titolo"), t("elimina_testo", { nome }), t("elimina_si"))) return;
-  const prima = ST.io.richieste;
+  const condivisa = (x.persone || []).length > 1;      // ci lavorano anche altri: sparisce anche per loro
+  if (!await domanda(t("elimina_titolo"), t(condivisa ? "elimina_testo_condivisa" : "elimina_testo", { nome }), t("elimina_si"))) return;
+  await togliDallElenco(id, "elimina");
+}
+// Esce da una fiera a cui partecipa (utente 2026-11-27): sparisce SUBITO dalle sue fiere, gli altri continuano; può
+// rientrare da "Tutte le fiere"
+async function lasciaFiera(id) {
+  const x = ((ST.io && ST.io.richieste) || []).find((r) => r.id === id);
+  if (!x) return;
+  const nome = [x.fiera, x.edizione].filter(Boolean).join(" ");
+  if (!await domanda(t("lascia_titolo"), t("lascia_testo", { nome }), t("lascia_si"))) return;
+  await togliDallElenco(id, "lascia");
+}
+async function togliDallElenco(id, azione) {
+  const prima = ST.io.richieste, primaTutte = ST.io.tutte;
   ST.io.richieste = prima.filter((r) => r.id !== id);
+  if (primaTutte) ST.io.tutte = azione === "lascia" ? primaTutte.map((r) => (r.id === id ? Object.assign({}, r, { tua: false }) : r))
+    : primaTutte.filter((r) => r.id !== id);
   disegnaElenco(); disegnaBarra();
-  try { await chiama("elimina", { id }); if (ST.dettagli) delete ST.dettagli[id]; }
-  catch (e) { ST.io.richieste = prima; disegnaElenco(); disegnaBarra(); avvisaErrore(e); }
+  try { await chiama(azione, { id }); if (ST.dettagli) delete ST.dettagli[id]; }
+  catch (e) { ST.io.richieste = prima; ST.io.tutte = primaTutte; disegnaElenco(); disegnaBarra(); avvisaErrore(e); }
+}
+// "Partecipa" da Tutte le fiere (entrata libera, utente 2026-11-27): il pulsante lavora finché il motore non risponde,
+// poi la fiera è fra le proprie e si apre. Quello che c'è già non conta come novità.
+async function partecipa(id, b) {
+  if (b) { b.disabled = true; b.classList.add("occupato"); }
+  try {
+    const j = await chiama("partecipa", { id });
+    // il motore manda già la fiera: si apre SUBITO; elenco e "Tutte le fiere" si rileggono dopo, in fondo
+    if (j.dettaglio) {
+      ST.dettagli[id] = j.dettaglio;
+      ST.io.richieste = [j.sommario].concat((ST.io.richieste || []).filter((r) => r.id !== id));
+      ST.io.tutte = (ST.io.tutte || []).map((r) => (r.id === id ? Object.assign({}, r, { tua: true }) : r));
+    } else applicaIo(await chiama("io", { completo: true }));
+    segnaVisto(id, (ST.dettagli[id] || {}).eventi);
+    ST.vista = "mie"; disegnaElenco();
+    await apriRichiesta(id);
+    aggiornaElenco();
+  } catch (e) {
+    if (b && b.isConnected) { b.disabled = false; b.classList.remove("occupato"); }
+    avvisaErrore(e);
+  }
 }
 async function tornaElenco() {
   if (daSalvare()) {
@@ -615,7 +684,7 @@ async function aggiornaElenco() {
 }
 // Ogni 20 s (e quando si torna sulla pagina): "è cambiato qualcosa?" con una chiamata leggerissima; se sì si rileggono
 // l'elenco e la richiesta aperta (stato, cronologia, versioni). Il modulo che si sta scrivendo NON si tocca.
-let _firma = null, _controllo = false;
+let _firma = null, _controllo = false, _rileggi = false;   // _rileggi: al prossimo controllo tutto, anche a fogli uguali
 // i dati di `io` appena arrivati: elenco, dettagli e firma ("com'erano i fogli") per il controllo successivo
 function applicaIo(j) {
   ST.io = j; ST.dettagli = j.dettagli || {};
@@ -628,18 +697,20 @@ function applicaIo(j) {
 async function controllaNovita() {
   if (!ST.chiave || !ST.io || _controllo || ST.invio) return;
   _controllo = true;
+  const forza = _rileggi; _rileggi = false;
   try {
-    const j = await chiama("io", { completo: true, firma_nota: _firma || "" });
+    const j = await chiama("io", { completo: true, firma_nota: forza ? "" : (_firma || "") });
     if (j.uguale) return;
     applicaIo(j);
     const id = ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id;
     const d = id && ST.dettagli[id];
     if (d) {
       ST.eventi = d.eventi; ST.richiesta.stato = d.richiesta.stato; ST.richiesta.aggiornata = d.richiesta.aggiornata;
+      ST.richiesta.persone = d.richiesta.persone;   // chi è entrato o uscito nel frattempo
       segnaVisto(id, ST.eventi);                  // arrivate mentre la si guarda: segnate ora, viste all'uscita
       aggiornaFile();
     }
-  } catch (e) { /* si riprova al giro dopo */ }
+  } catch (e) { if (forza) _rileggi = true; /* si riprova al giro dopo */ }
   finally { _controllo = false; }
 }
 // un controllo ogni 2 s con la pagina davanti, ogni 15 s quando è dietro altre finestre o ridotta a icona (prima si
@@ -711,6 +782,10 @@ function lega() {
     const fl = el.closest("#p-elenco [data-filtro]"); if (fl) { ST.filtro = fl.dataset.filtro || null; disegnaElenco(); return; }
     if (el.closest("#b-nuova") || el.closest("[data-nuova]")) { apriRichiesta(null); return; }
     const el_ = el.closest("[data-elimina]"); if (el_) { eliminaFiera(el_.dataset.elimina); return; }
+    const la = el.closest("[data-lascia]"); if (la) { lasciaFiera(la.dataset.lascia); return; }
+    const pa = el.closest("[data-partecipa]"); if (pa) { partecipa(pa.dataset.partecipa, pa); return; }
+    const vi = el.closest('[data-int="vista"] button');
+    if (vi) { const i = scegliInterruttore(vi.closest("[data-int]"), vi); if (i !== null) { ST.vista = i === 1 ? "tutte" : "mie"; setTimeout(() => { disegnaElenco(); disegnaBarra(); }, 180); } return; }
     const carta = el.closest("[data-apri]"); if (carta) { apriRichiesta(carta.dataset.apri); return; }
     if (el.closest("#b-indietro")) { tornaElenco(); return; }
     if (el.closest("#b-entra")) { entraConLink(); return; }

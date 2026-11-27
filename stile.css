@@ -23,6 +23,9 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 .eh-titolo-riga h1 { flex: none; }
 .eh-filtri { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: 32px; margin-bottom: 8.5px; }
 .eh-lingua { gap: 8px; }
+/* "Le mie fiere" / "Tutte le fiere" (2026-11-27): il selettore in fondo a destra della riga del titolo, appoggiato in basso */
+.eh-vista { margin-left: auto; padding-left: 24px; margin-bottom: 4px; flex: none; }
+#p-elenco .intestazione .titoli { flex: 1; min-width: 0; }
 
 /* ---------------------------------------------------------------- elenco delle fiere */
 .eh-griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; align-content: start; }
@@ -35,6 +38,11 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 .eh-accesso #b-entra { align-self: flex-end; }
 .eh-carta .testa h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .eh-carta .corpo { display: flex; flex-direction: column; gap: 8px; }
+/* Tutte le fiere: le carte delle fiere non proprie non si aprono (solo "Partecipa", in fondo a destra) */
+.eh-carta.eh-ferma { cursor: default; }
+.eh-carta-piede { display: flex; justify-content: flex-end; align-items: center; margin-top: 4px; min-height: 36px; }
+/* cronologia: il testo arriva tradotto nella lingua di chi legge */
+.eh-evento .chi .eh-tradotto { margin-left: 6px; font-style: italic; }
 /* il cestino sulla carta (utente 2026-11-26): discreto, rosso al passaggio del mouse */
 .eh-carta .a-destra { display: flex; align-items: center; gap: 6px; }
 .eh-elimina { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; padding: 0;
