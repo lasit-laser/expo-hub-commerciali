@@ -12,15 +12,21 @@ const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], 
 let _installa = null;              // l'invito del browser a installare l'app, se c'è (vedi installaApp in fondo)
 
 /* ---------------------------------------------------------------------------------------- motore */
+// Tempo massimo di una chiamata (utente 2026-11-27, "bloccato su Saving…"): ogni tanto il motore scrive nel foglio ma la
+// risposta di Google non torna mai, e senza un limite la pagina aspettava per sempre (anche il controllo delle novità).
+// Le letture (io, leggi...) si riprovano presto; le scritture hanno più margine (cartelle su Drive, traduzioni).
+const ATTESA_SCRITTURE = { salva: 40000, commento: 40000, rispondi: 40000, partecipa: 40000, lascia: 40000, elimina: 40000,
+  inizia_file: 40000, file_caricato: 40000, leggi_documenti: 300000 };     // Gemini legge i documenti: anche minuti
 async function chiama(azione, dati = {}) {
   let r, j;
+  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), ATTESA_SCRITTURE[azione] || 25000);
   try {
     // corpo testo semplice: niente "preflight", Apps Script lo accetta da qualsiasi origine
-    r = await fetch(EXPO.motore, { method: "POST", body: JSON.stringify(Object.assign({ azione, chiave: ST.chiave }, dati)) });
+    r = await fetch(EXPO.motore, { method: "POST", body: JSON.stringify(Object.assign({ azione, chiave: ST.chiave }, dati)), signal: stop.signal });
     j = await r.json();
   } catch (e) {
     const err = new Error(t("err_rete")); err.codice = "rete"; throw err;
-  }
+  } finally { clearTimeout(timer); }
   if (!j.ok) {
     const tradotti = { accesso: "err_accesso", date_ordine: "err_date_ordine", lettura_limite: "lettura_limite" };
     const testo = j.codice === "obbligatori" ? t("err_obbligatori", { campi: nomiCampi(j.campi || []) })
@@ -867,20 +873,45 @@ async function salva() {
     return;
   }
   const inCoda = ST.caricamenti.filter((c) => c.stato === "coda");
+  const prima = { aggiornata: ST.richiesta.aggiornata, ids: new Set(((ST.io && ST.io.richieste) || []).map((x) => x.id)) };
   ST.invio = true; aggiornaLato();
   try {
-    const r = await chiama("salva", { id: ST.richiesta.id, dati: d });
+    let r;
+    try { r = await chiama("salva", { id: ST.richiesta.id, dati: d }); }
+    catch (e) {
+      // nessuna risposta: spesso il motore ha salvato lo stesso; si controlla prima di dire che non è andata
+      if (e.codice !== "rete") throw e;
+      r = await salvataggioArrivato(ST.richiesta.id, d, prima);
+      if (!r) throw e;
+    }
     ST.richiesta.id = r.id;
     for (const voce of inCoda) { try { await carica(voce); } catch (e) { /* resta "non caricato" nell'elenco */ } }
-    const j = await chiama("leggi", { id: r.id });
-    ST.richiesta = j.richiesta; ST.eventi = j.eventi;
+    // già salvato: se la rilettura non risponde, non è un errore (la rifà il controllo delle novità)
+    let j = null;
+    try { j = await chiama("leggi", { id: r.id }); } catch (e) { _rileggi = true; }
+    if (j) { ST.richiesta = j.richiesta; ST.eventi = j.eventi; }
     ST.caricamenti = ST.caricamenti.filter((c) => c.stato === "errore");
-    if (nuova) { $("#p-richiesta")._html = null; disegnaRichiesta(Object.assign(vuota(), j.richiesta.dati)); }
+    if (nuova && j) { $("#p-richiesta")._html = null; disegnaRichiesta(Object.assign(vuota(), j.richiesta.dati)); }
     ST.salvato = JSON.stringify(leggiModulo());
     avvisoBarra(nuova ? t("inviata_ok") : t("salvata_ok"));
     aggiornaElenco();
   } catch (e) { avvisaErrore(e); }
   finally { ST.invio = false; aggiornaLato(); }
+}
+// Il salvataggio senza risposta è arrivato? Fiera già esistente: il motore la dà aggiornata dopo il clic e con le date e
+// i dati della fiera appena mandati. Fiera nuova: fra le sue c'è una fiera con quel nome che prima non c'era (così
+// riprovando non se ne crea un doppione). {id} se è arrivato, null se no o se non si riesce a capirlo.
+async function salvataggioArrivato(id, d, prima) {
+  try {
+    if (id) {
+      const j = await chiama("leggi", { id }), f = (j.richiesta.dati || {}).fiera || {};
+      const uguale = Object.keys(d.fiera).every((k) => String(f[k] || "") === String(d.fiera[k] || ""));
+      return j.richiesta.aggiornata !== prima.aggiornata && uguale ? { id } : null;
+    }
+    const io = await chiama("io");
+    const n = (io.richieste || []).find((x) => x.mia && !prima.ids.has(x.id) && x.fiera === d.fiera.nome);
+    return n ? { id: n.id } : null;
+  } catch (e) { return null; }
 }
 // Il commento compare SUBITO in cronologia e il campo si svuota (utente 2026-11-27: "ci mette qualche secondo"; REGOLE
 // 19): prima si aspettavano salvataggio (con le traduzioni) e rilettura, 6-9 s. Finché il motore non lo restituisce, il
