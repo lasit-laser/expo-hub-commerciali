@@ -8,6 +8,7 @@ const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], 
   letti: {}, lettura: null,        // letti: campo -> file da cui Gemini l'ha compilato; lettura: com'è andata l'ultima lettura
   vista: "mie",                    // "mie" (Le mie fiere), "tutte" (Tutte le fiere) o "calendario" (utente 2026-11-27)
   calVista: "mese", calMese: new Date(), soloMie: false };   // calendario: vista, giorno di riferimento, "Solo le mie fiere"
+let _installa = null;              // l'invito del browser a installare l'app, se c'è (vedi installaApp in fondo)
 
 /* ---------------------------------------------------------------------------------------- motore */
 async function chiama(azione, dati = {}) {
@@ -75,6 +76,7 @@ function disegnaBarra() {
     <div class="eh-sezioni">${sezioni}</div>
     <div class="barra-destra">
       <span class="letto" id="avviso-barra"></span>
+      ${_installa ? `<button class="pul medio" id="b-installa" data-tip="${esc(t("installa_tip"))}">${ic("installa")}<span>${esc(t("installa"))}</span></button>` : ""}
       ${c ? `<div class="utente"><span class="iniziali">${esc(iniziali(c.nome))}</span><span class="nome">${esc(c.nome)}</span></div>` : ""}
       <button class="pul medio eh-lingua" data-campo="lingua" id="b-lingua">${ic("lingua")}<span>${esc(LINGUE[LINGUA]._nome)}</span></button>
       ${temaHTML()}
@@ -885,6 +887,7 @@ function lega() {
     if (tm) { const i = scegliInterruttore(tm.closest("[data-int]"), tm); if (i !== null) scegliTema(i === 1); return; }
     const fl = el.closest("#p-elenco [data-filtro]"); if (fl) { ST.filtro = fl.dataset.filtro || null; disegnaElenco(); return; }
     if (el.closest("#b-nuova") || el.closest("[data-nuova]")) { apriRichiesta(null); return; }
+    if (el.closest("#b-installa")) { nascondiSuggerimento(); installaApp(); return; }
     const el_ = el.closest("[data-elimina]"); if (el_) { eliminaFiera(el_.dataset.elimina); return; }
     const la = el.closest("[data-lascia]"); if (la) { lasciaFiera(la.dataset.lascia); return; }
     const pa = el.closest("[data-partecipa]"); if (pa) { partecipa(pa.dataset.partecipa, pa); return; }
@@ -1079,5 +1082,16 @@ function misuraFinestra() {
   } catch (e) { /* il browser non lo permette: resta com'è */ }
 }
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+// "Installa l'app" nella barra (utente 2026-11-27): il browser lo permette SOLO quando l'app non è installata (evento
+// beforeinstallprompt); un clic apre la finestra d'installazione di Chrome, che mette l'icona sul desktop e nel menu
+// Start. Se l'app c'è già il pulsante non compare: nessuna pagina può ricreare da sola un'icona cancellata.
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); _installa = e; disegnaBarra(); });
+window.addEventListener("appinstalled", () => { _installa = null; disegnaBarra(); });
+async function installaApp() {
+  const e = _installa;
+  if (!e) return;
+  e.prompt();
+  try { const r = await e.userChoice; if (r && r.outcome === "accepted") { _installa = null; disegnaBarra(); } } catch (err) { /* resta */ }
+}
 misuraFinestra();
 avvio();
