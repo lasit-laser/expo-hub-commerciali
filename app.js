@@ -157,7 +157,7 @@ function disegnaElenco() {
   const tutteLe = ST.vista === "tutte", cal = ST.vista === "calendario";
   // (utente 2026-11-27) sulla riga del titolo, a destra, "Nuova richiesta"; il selettore delle viste è al centro della
   // barra in alto (disegnaBarra), sotto il titolo resta la riga vuota della frase come prima
-  const nuovaR = ST.io ? `<div class="eh-vista"><button class="pul principale medio" id="b-nuova">${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div>` : "";
+  const nuovaR = ST.io ? `<div class="eh-vista"><button class="pul principale eh-grande" id="b-nuova">${ic("aggiungi")}<span>${esc(t("nuova_richiesta"))}</span></button></div>` : "";
   const selettore = `<div class="frase"> </div>`;
   const titolo = t(cal ? "titolo_calendario" : tutteLe ? "titolo_tutte" : "titolo_elenco");
   const accanto = cal ? `<div class="eh-filtri">${legendaCal()}</div>` : !tutteLe && tutte.length ? `<div class="eh-filtri">${filtri}</div>` : "";

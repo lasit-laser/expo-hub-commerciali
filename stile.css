@@ -24,7 +24,10 @@ i[data-ic].svg svg { display: block; width: 1em; height: 1em; }
 .eh-filtri { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-left: 32px; margin-bottom: 8.5px; }
 .eh-lingua { gap: 8px; }
 /* "Le mie fiere" / "Tutte le fiere" (2026-11-27): il selettore in fondo a destra della riga del titolo, appoggiato in basso */
-.eh-vista { margin-left: auto; padding-left: 24px; margin-bottom: 4px; flex: none; }
+.eh-vista { margin-left: auto; padding-left: 24px; margin-bottom: 3px; flex: none; }
+/* "Nuova richiesta" più grande (utente 2026-11-27): alto 44 come il selettore della barra, testo e icona in proporzione */
+.pul.eh-grande { height: 44px; border-radius: 22px; padding: 0 24px; gap: 10px; font-size: 14px; }
+.pul.eh-grande i { font-size: 14px; }
 /* (utente 2026-11-27) barra in alto a tre colonne come quella del pannello del marketing (pannello.css): logo e
    percorso a sinistra, il selettore "Le mie fiere | Tutte le fiere | Calendario" AL CENTRO (le due colonne laterali
    uguali), grande come le sezioni del pannello (il selettore del kit ingrandito del 30%), comandi a destra.
