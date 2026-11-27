@@ -12,21 +12,32 @@ const ST = { chiave: null, io: null, dettagli: {}, richiesta: null, eventi: [], 
 let _installa = null;              // l'invito del browser a installare l'app, se c'è (vedi installaApp in fondo)
 
 /* ---------------------------------------------------------------------------------------- motore */
-// Tempo massimo di una chiamata (utente 2026-11-27, "bloccato su Saving…"): ogni tanto il motore scrive nel foglio ma la
-// risposta di Google non torna mai, e senza un limite la pagina aspettava per sempre (anche il controllo delle novità).
-// Le letture (io, leggi...) si riprovano presto; le scritture hanno più margine (cartelle su Drive, traduzioni).
-const ATTESA_SCRITTURE = { salva: 40000, commento: 40000, rispondi: 40000, partecipa: 40000, lascia: 40000, elimina: 40000,
-  inizia_file: 40000, file_caricato: 40000, leggi_documenti: 300000 };     // Gemini legge i documenti: anche minuti
+// Tempo massimo di una chiamata e NUOVI TENTATIVI (utente 2026-11-27, "bloccato su Saving…"; REGOLE 24). Misura di quel
+// giorno: 1 chiamata su 5 a Google restava senza risposta per sempre, le altre rispondevano in 1-2 s. Quindi attese brevi
+// (letture 15 s, scritture 30 s) e si riprova da soli. Ogni scrittura porta un `op` unico, uguale in tutti i tentativi:
+// se la prima era arrivata, il motore restituisce la sua risposta invece di rifarla (niente commenti o fiere doppie).
+const LETTURE = ["io", "leggi", "firma"];
+const ATTESE = { salva: 30000, inizia_file: 30000, leggi_documenti: 300000 };     // Gemini legge i documenti: anche minuti
+const TENTATIVI = { leggi_documenti: 1 };                                          // (una lettura con Gemini costa: una volta)
+const nuovoOp = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)).replace(/-/g, "");
 async function chiama(azione, dati = {}) {
   let r, j;
-  const stop = new AbortController(), timer = setTimeout(() => stop.abort(), ATTESA_SCRITTURE[azione] || 25000);
-  try {
-    // corpo testo semplice: niente "preflight", Apps Script lo accetta da qualsiasi origine
-    r = await fetch(EXPO.motore, { method: "POST", body: JSON.stringify(Object.assign({ azione, chiave: ST.chiave }, dati)), signal: stop.signal });
-    j = await r.json();
-  } catch (e) {
-    const err = new Error(t("err_rete")); err.codice = "rete"; throw err;
-  } finally { clearTimeout(timer); }
+  const lettura = LETTURE.includes(azione);
+  const corpo = JSON.stringify(Object.assign({ azione, chiave: ST.chiave }, lettura || dati.op ? {} : { op: nuovoOp() }, dati));
+  const prove = TENTATIVI[azione] || 4, attesa = ATTESE[azione] || (lettura ? 15000 : 30000);
+  for (let n = 1; ; n++) {
+    const stop = new AbortController(), timer = setTimeout(() => stop.abort(), attesa);
+    try {
+      // corpo testo semplice: niente "preflight", Apps Script lo accetta da qualsiasi origine
+      r = await fetch(EXPO.motore, { method: "POST", body: corpo, signal: stop.signal });
+      j = await r.json();
+      break;
+    } catch (e) {
+      if (n >= prove) { const err = new Error(t("err_rete")); err.codice = "rete"; throw err; }
+      await new Promise((ok) => setTimeout(ok, 800 * n));
+    } finally { clearTimeout(timer); }
+  }
+  if (!j || typeof j !== "object") { const err = new Error(t("err_rete")); err.codice = "rete"; throw err; }
   if (!j.ok) {
     const tradotti = { accesso: "err_accesso", date_ordine: "err_date_ordine", lettura_limite: "lettura_limite" };
     const testo = j.codice === "obbligatori" ? t("err_obbligatori", { campi: nomiCampi(j.campi || []) })
@@ -114,6 +125,7 @@ function avvisoBarra(testo) {
 function cambiaLingua(l) {
   if (!LINGUE[l] || l === LINGUA) return;
   const bozza = ST.pagina === "richiesta" ? leggiModulo() : null;
+  const commento = $("#commento") ? $("#commento").value : "";       // anche il commento che si sta scrivendo resta
   LINGUA = l;
   document.documentElement.lang = l;
   try { localStorage.setItem(LINGUA_LS, l); } catch (e) { /* solo comodità */ }
@@ -121,7 +133,7 @@ function cambiaLingua(l) {
   if (ST.chiave) chiama("lingua", { lingua: l }).then(() => { _rileggi = true; controllaNovita(); }).catch(() => {});
   disegnaBarra();
   disegnaElenco();
-  if (bozza) disegnaRichiesta(bozza);
+  if (bozza) { disegnaRichiesta(bozza); const c = $("#commento"); if (c && commento) c.value = commento; }
   if (ST.pagina === "accesso") disegnaAccesso();
 }
 
@@ -302,28 +314,35 @@ const ETICHETTE = { nome: "c_nome", edizione: "c_edizione", citta: "c_citta", pa
 const nomiCampi = (campi) => campi.map((k) => t(ETICHETTE[String(k).replace(/^fiera\./, "")] || "c_nome")).join(", ");
 const mancanti = (d) => OBBLIGATORI.filter((k) => { const [a, b] = k.split("."); return !String(d[a][b] || "").trim(); });
 const campo = (k, et, val, { tipo = "text", s = "s2", area = false, segnaposto = "", min = "" } = {}) => {
-  const obbl = OBBLIGATORI.includes(k);
+  const obbl = OBBLIGATORI.includes(k), lungo = MAX_CAMPO[k] ? ` maxlength="${MAX_CAMPO[k]}"` : "";
   return `<label class="eh-campo ${s}" data-fc="${k}"><span class="et">${esc(et)}${obbl ? `<b data-tip="${esc(t("obbligatorio"))}">*</b>` : ""}</span>` +
-  (area ? `<span class="campo eh-area"><textarea data-f="${k}" placeholder="${esc(segnaposto)}" spellcheck="true">${esc(val)}</textarea></span>`
-    : `<span class="campo"><input data-f="${k}" type="${tipo}" value="${esc(val)}"${min ? ` min="${esc(min)}"` : ""} spellcheck="false" autocomplete="off"></span>`) + `</label>`;
+  (area ? `<span class="campo eh-area"><textarea data-f="${k}"${lungo} placeholder="${esc(segnaposto)}" spellcheck="true">${esc(val)}</textarea></span>`
+    : `<span class="campo"><input data-f="${k}" type="${tipo}" value="${esc(val)}"${min ? ` min="${esc(min)}"` : ""}${lungo} spellcheck="false" autocomplete="off"></span>`) + `</label>`;
 };
+// i limiti del motore (pulisci_): il campo non lascia scrivere di più, invece di tagliare in silenzio al salvataggio
+const MAX_CAMPO = { "fiera.nome": 160, "fiera.edizione": 20, "fiera.citta": 80, "fiera.paese": 80, "fiera.padiglione": 40, "fiera.stand": 40,
+  "fiera.sito": 300, "allestitore.azienda": 120, "allestitore.referente": 120, "allestitore.email": 160, "allestitore.telefono": 40,
+  "stand.misure": 300, "grafiche.macchine": 600, note: 4000 };
+// un materiale con consegne del marketing o allegati non si toglie (revisione 2026-11-27: si perdevano le versioni;
+// il motore lo tiene comunque)
+const conLavoro = (id) => ST.eventi.some((e) => e.materiale === id && (e.tipo === "versione" || e.tipo === "file"));
 
 function materialeHTML(m) {
   const id = m.id || "m" + Math.random().toString(36).slice(2, 9);
   const allegati = ST.richiesta.id ? listaFile("materiale", id) : `<div class="quieto">${esc(t("mat_salva_prima"))}</div>`;
   return `<div class="eh-mat-gruppo"><div class="eh-mat" data-mat="${esc(id)}">
     <div class="eh-mat-testa"><span class="tessera piccola">${ic("materiale")}</span><b>${esc(t("tipo_" + (m.tipo || "stand")))}</b>
-      <button class="pul medio" data-togli="${esc(id)}">${ic("cestino")}<span>${esc(t("mat_togli"))}</span></button></div>
+      ${conLavoro(id) ? "" : `<button class="pul medio" data-togli="${esc(id)}">${ic("cestino")}<span>${esc(t("mat_togli"))}</span></button>`}</div>
     <div class="eh-campi">
       <label class="eh-campo s3"><span class="et">${esc(t("mat_tipo"))}</span>
         <button class="tendina" data-campo="tipo-${esc(id)}" data-m="tipo" data-v="${esc(m.tipo || "stand")}"><span class="va">${esc(t("tipo_" + (m.tipo || "stand")))}</span>${ic("giu")}</button></label>
       <label class="eh-campo s3"><span class="et">${esc(t("mat_scadenza"))}</span><span class="campo"><input data-m="scadenza" type="date" value="${esc(m.scadenza || "")}"></span></label>
-      <label class="eh-campo s2"><span class="et">${esc(t("mat_larghezza"))}</span><span class="campo"><input data-m="larghezza" inputmode="decimal" value="${esc(m.larghezza || "")}"></span></label>
-      <label class="eh-campo s2"><span class="et">${esc(t("mat_altezza"))}</span><span class="campo"><input data-m="altezza" inputmode="decimal" value="${esc(m.altezza || "")}"></span></label>
+      <label class="eh-campo s2"><span class="et">${esc(t("mat_larghezza"))}</span><span class="campo"><input data-m="larghezza" maxlength="12" inputmode="decimal" value="${esc(m.larghezza || "")}"></span></label>
+      <label class="eh-campo s2"><span class="et">${esc(t("mat_altezza"))}</span><span class="campo"><input data-m="altezza" maxlength="12" inputmode="decimal" value="${esc(m.altezza || "")}"></span></label>
       <label class="eh-campo s2"><span class="et">${esc(t("mat_unita"))}</span>
         <button class="tendina" data-campo="unita-${esc(id)}" data-m="unita" data-v="${esc(m.unita || "cm")}"><span class="va">${esc(m.unita || "cm")}</span>${ic("giu")}</button></label>
-      <label class="eh-campo s3"><span class="et">${esc(t("mat_descrizione"))}</span><span class="campo eh-area"><textarea data-m="descrizione">${esc(m.descrizione || "")}</textarea></span></label>
-      <label class="eh-campo s3"><span class="et">${esc(t("mat_specifiche"))}</span><span class="campo eh-area"><textarea data-m="specifiche">${esc(m.specifiche || "")}</textarea></span></label>
+      <label class="eh-campo s3"><span class="et">${esc(t("mat_descrizione"))}</span><span class="campo eh-area"><textarea data-m="descrizione" maxlength="600">${esc(m.descrizione || "")}</textarea></span></label>
+      <label class="eh-campo s3"><span class="et">${esc(t("mat_specifiche"))}</span><span class="campo eh-area"><textarea data-m="specifiche" maxlength="600">${esc(m.specifiche || "")}</textarea></span></label>
     </div>
     <div class="eh-allegati" data-allegati="${esc(id)}">${allegati}</div>
     ${ST.richiesta.id ? `<div class="eh-azioni"><button class="pul medio" data-allega="${esc(id)}">${ic("carica")}<span>${esc(t("mat_allega"))}</span></button></div>` : ""}
@@ -419,13 +438,21 @@ async function rispondiVersione(materiale, versione, esito) {
     if (r === null || r === false || !String(r).trim()) return;
     testo = String(r).trim();
   } else if (!(await domanda(t("ver_ok_titolo", { n: versione }), t("ver_ok_testo"), t("ver_ok_si")))) return;
+  // revisione 2026-11-27: la fiera si fissa PRIMA (uscendo nel frattempo, ST.richiesta era null), una risposta alla volta
+  // (doppio clic), e "già risposto" non è un errore (la prima era arrivata)
+  const rq = ST.richiesta, id = rq && rq.id, chiave = id + "|" + materiale + "|" + versione;
+  if (!id || (ST.rispondo || (ST.rispondo = new Set())).has(chiave)) return;
+  ST.rispondo.add(chiave);
   try {
-    await chiama("rispondi", { id: ST.richiesta.id, materiale, versione, esito, testo });
-    const j = await chiama("leggi", { id: ST.richiesta.id });
-    ST.eventi = j.eventi; ST.richiesta.stato = j.richiesta.stato; ST.richiesta.aggiornata = j.richiesta.aggiornata;
-    aggiornaFile();
+    try { await chiama("rispondi", { id, materiale, versione, esito, testo, op: nuovoOp() }); }
+    catch (e) { if (e.codice !== "risposta") throw e; }
+    try {
+      const j = await chiama("leggi", { id });
+      if (ST.richiesta === rq) { ST.eventi = conAttesa(id, j.eventi); rq.stato = j.richiesta.stato; rq.aggiornata = j.richiesta.aggiornata; aggiornaFile(); }
+    } catch (e) { _rileggi = true; }
     aggiornaElenco();
   } catch (e) { avvisaErrore(e); }
+  finally { ST.rispondo.delete(chiave); }
 }
 
 function disegnaRichiesta(d) {
@@ -524,9 +551,12 @@ function aggiornaFile() {
 }
 function aggiungiFile(files, categoria, materiale = "") {
   for (const file of files) {
-    const voce = { id: Math.random().toString(36).slice(2), nome: file.name, dimensione: file.size, file, categoria, materiale, stato: "coda", p: 0 };
+    // `per` e `rid`: la fiera del file fissata SUBITO (revisione 2026-11-27: prima si leggeva alla fine del caricamento,
+    // e uscendo dalla fiera il file restava su Drive senza essere registrato)
+    const voce = { id: Math.random().toString(36).slice(2), nome: file.name, dimensione: file.size, file, categoria, materiale, stato: "coda", p: 0,
+      per: ST.richiesta, rid: ST.richiesta.id || null };
     ST.caricamenti.push(voce);
-    if (ST.richiesta.id) carica(voce).catch(() => {});
+    if (voce.rid) carica(voce).catch(() => {});
   }
   if (categoria === "allestitore") leggiDocumenti(Array.from(files));
   aggiornaFile();
@@ -626,40 +656,67 @@ function letturaHTML() {
   return riga + non;
 }
 async function carica(voce) {
+  const rid = voce.rid;                                // la fiera del file, fissata quando è stato scelto
+  if (!rid) return;
   voce.stato = "su"; voce.p = 0; aggiornaFile();
+  ST.attivi = (ST.attivi || 0) + 1;                    // caricamenti in corso in TUTTE le fiere (chiusura dell'app)
+  try { await caricaDavvero(voce, rid); } finally { ST.attivi--; }
+}
+async function caricaDavvero(voce, rid) {
+  let esito = null;
   try {
-    const { sessione } = await chiama("inizia_file", { id: ST.richiesta.id, nome: voce.nome, tipo: voce.file.type || "application/octet-stream",
+    const { sessione } = await chiama("inizia_file", { id: rid, nome: voce.nome, tipo: voce.file.type || "application/octet-stream",
       dimensione: voce.dimensione, categoria: voce.categoria, materiale: voce.materiale, origine: location.origin });
     const pezzo = (EXPO.pezzo_mb || 32) * 1024 * 1024;
-    let inizio = 0, esito = null, tentativi = 0;
+    let inizio = 0, tentativi = 0;
     if (!voce.dimensione) esito = await put(sessione, voce.file, 0, 0, voce);
     while (!esito || !esito.finito) {
       const fine = Math.min(inizio + pezzo, voce.dimensione);
       try { esito = await put(sessione, voce.file.slice(inizio, fine), inizio, voce.dimensione, voce); tentativi = 0; }
-      catch (e) { if (++tentativi > 3) throw e; await new Promise((r) => setTimeout(r, 1500 * tentativi)); continue; }
+      catch (e) {
+        if (++tentativi > 6) throw e;
+        await new Promise((r) => setTimeout(r, Math.min(30000, 1500 * 2 ** tentativi)));
+        // dopo un'interruzione si CHIEDE a Drive a che punto è e si riparte da lì (prima si ripartiva da dov'era la pagina)
+        try { const s = await put(sessione, new Blob([]), 0, voce.dimensione, voce, true); if (s.finito) esito = s; else inizio = s.arrivati; } catch (e2) { /* si riprova */ }
+        continue;
+      }
       if (!esito.finito) inizio = esito.arrivati;
     }
-    await chiama("file_caricato", { id: ST.richiesta.id, file_id: esito.id, categoria: voce.categoria, materiale: voce.materiale });
+    await chiama("file_caricato", { id: rid, file_id: esito.id, categoria: voce.categoria, materiale: voce.materiale });
     voce.stato = "ok";
-    const j = await chiama("leggi", { id: ST.richiesta.id });
-    ST.eventi = j.eventi;
   } catch (e) {
     voce.stato = "errore";
+    aggiornaFile();
     throw e;
-  } finally { aggiornaFile(); }
+  }
+  // caricato e registrato: una rilettura fallita NON lo fa diventare "errore" (si ricaricava: doppione su Drive)
+  try {
+    const j = await chiama("leggi", { id: rid });
+    if (ST.richiesta && ST.richiesta.id === rid) ST.eventi = conAttesa(rid, j.eventi);
+  } catch (e) { _rileggi = true; }
+  aggiornaFile();
 }
-function put(sessione, blob, inizio, totale, voce) {
+// Un pezzo del file (o, con `stato`, la domanda "a che punto sei?"). Senza avanzamento per 60 s si interrompe (prima,
+// col Wi-Fi della fiera bloccato, restava fermo per sempre).
+function put(sessione, blob, inizio, totale, voce, stato = false) {
   return new Promise((ok, ko) => {
     const x = new XMLHttpRequest();
+    let ultimo = Date.now();
+    const guardia = setInterval(() => { if (Date.now() - ultimo > 60000) x.abort(); }, 5000);
+    const fine = (f, v) => { clearInterval(guardia); f(v); };
     x.open("PUT", sessione);
-    x.setRequestHeader("Content-Range", totale ? `bytes ${inizio}-${inizio + blob.size - 1}/${totale}` : "bytes */0");
-    x.upload.onprogress = (e) => { voce.p = totale ? (inizio + e.loaded) / totale : 1; aggiornaFile(); };
+    x.setRequestHeader("Content-Range", stato ? `bytes */${totale}` : totale ? `bytes ${inizio}-${inizio + blob.size - 1}/${totale}` : "bytes */0");
+    x.upload.onprogress = (e) => { ultimo = Date.now(); if (!stato) { voce.p = totale ? (inizio + e.loaded) / totale : 1; aggiornaFile(); } };
     x.onload = () => {
-      if (x.status === 308) { const r = x.getResponseHeader("Range"); ok({ finito: false, arrivati: r ? Number(r.split("-")[1]) + 1 : inizio + blob.size }); }
-      else if (x.status === 200 || x.status === 201) { const f = JSON.parse(x.responseText); ok({ finito: true, id: f.id }); }
-      else ko(new Error("Drive " + x.status));
+      // 308 senza Range = Drive non ha ancora niente (si riparte da 0; prima si saltava il pezzo)
+      if (x.status === 308) { const r = x.getResponseHeader("Range"); fine(ok, { finito: false, arrivati: r ? Number(r.split("-")[1]) + 1 : 0 }); }
+      else if (x.status === 200 || x.status === 201) {
+        try { fine(ok, { finito: true, id: JSON.parse(x.responseText).id }); } catch (e) { fine(ko, new Error("Drive")); }
+      } else fine(ko, new Error("Drive " + x.status));
     };
-    x.onerror = () => ko(new Error("rete"));
+    x.onerror = () => fine(ko, new Error("rete"));
+    x.onabort = () => fine(ko, new Error("rete"));
+    x.ontimeout = () => fine(ko, new Error("rete"));
     x.send(blob);
   });
 }
@@ -724,16 +781,22 @@ async function apriRichiesta(id) {
     const via = await domanda(t("esci_titolo"), t("esci_domanda"), t("esci_si"));
     if (!via) return;
   }
+  // l'ultima apertura chiesta vince: se mentre si aspetta il motore si apre altro (es. "Nuova richiesta" e si comincia
+  // a scrivere), la risposta in ritardo non sostituisce più il modulo (revisione 2026-11-27)
+  const mia = ST.apertura = (ST.apertura || 0) + 1;
   try {
     if (id) {
       // il dettaglio è già arrivato con l'elenco (io completo): si apre SUBITO; dal motore (3-4 s) solo se manca
       const pronto = ST.dettagli && ST.dettagli[id];
       const j = pronto ? JSON.parse(JSON.stringify(pronto)) : await chiama("leggi", { id });
+      if (ST.apertura !== mia) return;
       ST.richiesta = j.richiesta; ST.eventi = conAttesa(id, j.eventi);
       ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate 3 s (programmaLetta), poi lette
       segnaVisto(id, ST.eventi);
     } else { ST.richiesta = { id: null, stato: "inviata", dati: vuota() }; ST.eventi = []; }
     ST.caricamenti = []; ST.letti = {}; ST.lettura = null;
+    // la BASE del modulo: i dati da cui parte (al salvataggio il motore unisce le modifiche dei colleghi, unisci_)
+    ST.base = id ? JSON.parse(JSON.stringify(ST.richiesta.dati || {})) : null;
     const dati = Object.assign(vuota(), ST.richiesta.dati);
     $("#p-richiesta")._html = null;
     ST.pagina = "richiesta";
@@ -742,7 +805,7 @@ async function apriRichiesta(id) {
     aggiornaLato();
     if (gia) { $("#p-richiesta").scrollTop = 0; apri($$(".scheda", $("#p-richiesta"))); }
     else cambiaPagina($("#p-elenco"), $("#p-richiesta"), () => ST.pagina === "richiesta");
-  } catch (e) { avvisaErrore(e); }
+  } catch (e) { if (ST.apertura === mia) avvisaErrore(e); }
 }
 // Il commerciale elimina una sua fiera (utente 2026-11-26): dopo la conferma sparisce SUBITO dall'elenco e il motore la
 // toglie anche dal pannello del marketing. Se il motore dice di no, la fiera torna al suo posto con l'errore.
@@ -823,12 +886,13 @@ function applicaIo(j) {
 // niente il motore risponde subito "uguale", se no manda già elenco e dettagli. Con la fiera aperta si aggiornano
 // anche stato, cronologia e versioni. Il modulo che si sta scrivendo NON si tocca.
 async function controllaNovita() {
-  if (!ST.chiave || !ST.io || _controllo || ST.invio) return;
+  if (!ST.chiave || _controllo || ST.invio || ST.pagina === "accesso") return;
   _controllo = true;
-  const forza = _rileggi; _rileggi = false;
+  const forza = _rileggi || !ST.io; _rileggi = false;
   try {
     const j = await chiama("io", { completo: true, firma_nota: forza ? "" : (_firma || "") });
-    if (j.uguale) return;
+    if (j.uguale) { moduloDeiColleghi(); return; }
+    if (!ST.io) { avviaConIo(j); return; }        // il primo caricamento era fallito: si riparte da qui (prima, elenco vuoto per sempre)
     applicaIo(j);
     const id = ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id;
     const d = id && ST.dettagli[id];
@@ -836,10 +900,24 @@ async function controllaNovita() {
       ST.eventi = conAttesa(id, d.eventi); ST.richiesta.stato = d.richiesta.stato; ST.richiesta.aggiornata = d.richiesta.aggiornata;
       ST.richiesta.persone = d.richiesta.persone;   // chi è entrato o uscito nel frattempo
       segnaVisto(id, ST.eventi);                  // arrivate mentre la si guarda: segnate ora, viste all'uscita
+      moduloDeiColleghi();
       aggiornaFile();
     }
   } catch (e) { if (forza) _rileggi = true; /* si riprova al giro dopo */ }
   finally { _controllo = false; }
+}
+// Un collega della fiera condivisa ha salvato: se qui non c'è niente da salvare e non si sta scrivendo in un campo, il
+// modulo mostra subito i suoi dati (revisione 2026-11-27: prima restavano quelli dell'apertura fino a riaprirla). Si
+// guarda a ogni giro del controllo: se in quel momento si stava scrivendo, ci si riprova al giro dopo.
+function moduloDeiColleghi() {
+  const id = ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id, d = id && ST.dettagli[id];
+  if (!d || !d.richiesta.dati || ST.invio || daSalvare()) return;
+  if (JSON.stringify(d.richiesta.dati) === JSON.stringify(ST.base || {})) return;
+  const a = document.activeElement;
+  if (a && a.matches && a.matches("#p-richiesta input, #p-richiesta textarea") && a.id !== "commento") return;
+  if (tendina && tendina.id) return;                                  // una tendina del modulo aperta
+  ST.richiesta.dati = d.richiesta.dati;
+  ridisegnaModulo(d.richiesta.dati);
 }
 // un controllo ogni 2 s con la pagina davanti, ogni 15 s quando è dietro altre finestre o ridotta a icona (prima si
 // fermava: le novità comparivano solo riaprendo l'app); tornandoci, un controllo subito
@@ -872,46 +950,56 @@ async function salva() {
     await dialogo({ tipo: "avviso", titolo: t("err_titolo"), testo: t("err_date_ordine"), si: t("ok") });
     return;
   }
-  const inCoda = ST.caricamenti.filter((c) => c.stato === "coda");
-  const prima = { aggiornata: ST.richiesta.aggiornata, ids: new Set(((ST.io && ST.io.richieste) || []).map((x) => x.id)) };
+  // Revisione 2026-11-27. (1) Tutto si lega alla fiera di PARTENZA (`rq`): se nel frattempo se ne apre un'altra, la
+  // risposta non tocca quella (prima poteva sovrascriverla al salvataggio dopo). (2) Si manda la `base` (i dati da cui
+  // il modulo è partito): il motore tiene anche le modifiche dei colleghi della fiera condivisa. (3) Quello che si
+  // scrive DURANTE il salvataggio resta "da salvare" (prima risultava salvato senza esserlo). (4) I file in coda partono
+  // DOPO, senza tenere "Saving…" acceso per minuti. (5) Una fiera nuova rimandata dopo una risposta persa usa lo stesso
+  // `op`: il motore non ne crea una seconda.
+  const rq = ST.richiesta, inviati = JSON.stringify(d);
+  if (nuova && (!ST.opNuova || ST.opNuova.per !== rq)) ST.opNuova = { per: rq, op: nuovoOp() };
   ST.invio = true; aggiornaLato();
   try {
-    let r;
-    try { r = await chiama("salva", { id: ST.richiesta.id, dati: d }); }
-    catch (e) {
-      // nessuna risposta: spesso il motore ha salvato lo stesso; si controlla prima di dire che non è andata
-      if (e.codice !== "rete") throw e;
-      r = await salvataggioArrivato(ST.richiesta.id, d, prima);
-      if (!r) throw e;
+    const r = await chiama("salva", { id: rq.id, dati: d, base: nuova ? null : (ST.base || rq.dati || null), op: nuova ? ST.opNuova.op : nuovoOp() });
+    if (nuova) ST.opNuova = null;
+    rq.id = r.id;
+    const qui = ST.richiesta === rq && ST.pagina === "richiesta";
+    if (r.dati) rq.dati = r.dati;
+    if (qui) {
+      const ora = JSON.stringify(leggiModulo()), scritto = ora !== inviati;
+      if (nuova) {
+        // la fiera nuova diventa "esistente" (pulsanti, allegati dei materiali): si ridisegna dal modulo ATTUALE, così
+        // anche quello scritto durante il salvataggio resta (il motore tiene gli id dei materiali della pagina)
+        const attuale = Object.assign(vuota(), leggiModulo());
+        $("#p-richiesta")._html = null; disegnaRichiesta(attuale);
+        ST.base = r.dati || d; ST.salvato = inviati;
+      } else if (!scritto && r.dati && JSON.stringify(r.dati) !== inviati) {
+        // il motore ha unito le modifiche di un collega (o tenuto un materiale con consegne): il modulo le mostra
+        ridisegnaModulo(r.dati);
+      } else {
+        ST.base = scritto ? d : (r.dati || d); ST.salvato = inviati;
+      }
+      avvisoBarra(nuova ? t("inviata_ok") : t("salvata_ok"));
     }
-    ST.richiesta.id = r.id;
-    for (const voce of inCoda) { try { await carica(voce); } catch (e) { /* resta "non caricato" nell'elenco */ } }
-    // già salvato: se la rilettura non risponde, non è un errore (la rifà il controllo delle novità)
-    let j = null;
-    try { j = await chiama("leggi", { id: r.id }); } catch (e) { _rileggi = true; }
-    if (j) { ST.richiesta = j.richiesta; ST.eventi = j.eventi; }
-    ST.caricamenti = ST.caricamenti.filter((c) => c.stato === "errore");
-    if (nuova && j) { $("#p-richiesta")._html = null; disegnaRichiesta(Object.assign(vuota(), j.richiesta.dati)); }
-    ST.salvato = JSON.stringify(leggiModulo());
-    avvisoBarra(nuova ? t("inviata_ok") : t("salvata_ok"));
+    // i file scelti prima di avere l'id (fiera nuova) partono ADESSO, ognuno per conto suo
+    ST.caricamenti.filter((c) => c.stato === "coda" && !c.rid && c.per === rq).forEach((voce) => { voce.rid = r.id; carica(voce).catch(() => {}); });
+    // la rilettura: se non risponde non è un errore (il salvataggio è fatto; la rifà il controllo delle novità)
+    chiama("leggi", { id: r.id }).then((j) => {
+      if (ST.richiesta !== rq) return;
+      Object.assign(rq, { stato: j.richiesta.stato, aggiornata: j.richiesta.aggiornata, creata: j.richiesta.creata, persone: j.richiesta.persone, mia: j.richiesta.mia });
+      ST.eventi = conAttesa(r.id, j.eventi); aggiornaFile();
+    }).catch(() => { _rileggi = true; });
     aggiornaElenco();
-  } catch (e) { avvisaErrore(e); }
+  } catch (e) { if (ST.richiesta === rq) avvisaErrore(e); }
   finally { ST.invio = false; aggiornaLato(); }
 }
-// Il salvataggio senza risposta è arrivato? Fiera già esistente: il motore la dà aggiornata dopo il clic e con le date e
-// i dati della fiera appena mandati. Fiera nuova: fra le sue c'è una fiera con quel nome che prima non c'era (così
-// riprovando non se ne crea un doppione). {id} se è arrivato, null se no o se non si riesce a capirlo.
-async function salvataggioArrivato(id, d, prima) {
-  try {
-    if (id) {
-      const j = await chiama("leggi", { id }), f = (j.richiesta.dati || {}).fiera || {};
-      const uguale = Object.keys(d.fiera).every((k) => String(f[k] || "") === String(d.fiera[k] || ""));
-      return j.richiesta.aggiornata !== prima.aggiornata && uguale ? { id } : null;
-    }
-    const io = await chiama("io");
-    const n = (io.richieste || []).find((x) => x.mia && !prima.ids.has(x.id) && x.fiera === d.fiera.nome);
-    return n ? { id: n.id } : null;
-  } catch (e) { return null; }
+// Il modulo ridisegnato con i dati del motore (unione con le modifiche dei colleghi), restando dove si era nella pagina
+function ridisegnaModulo(dati) {
+  const p = $("#p-richiesta"), su = p.scrollTop, fuori = document.scrollingElement ? document.scrollingElement.scrollTop : 0;
+  p._html = null;
+  disegnaRichiesta(Object.assign(vuota(), dati));
+  ST.base = dati; ST.salvato = JSON.stringify(leggiModulo());
+  p.scrollTop = su; if (document.scrollingElement) document.scrollingElement.scrollTop = fuori;
 }
 // Il commento compare SUBITO in cronologia e il campo si svuota (utente 2026-11-27: "ci mette qualche secondo"; REGOLE
 // 19): prima si aspettavano salvataggio (con le traduzioni) e rilettura, 6-9 s. Finché il motore non lo restituisce, il
@@ -927,20 +1015,28 @@ async function commenta() {
   ST.eventi = ST.eventi.concat([locale]);
   aggiornaLato();
   try {
-    await chiama("commento", { id, testo });
-    const j = await chiama("leggi", { id });
-    if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id === id) {
-      ST.eventi = conAttesa(id, j.eventi); ST.richiesta.aggiornata = j.richiesta.aggiornata; aggiornaLato();
-    }
+    // con l'op i tentativi automatici non creano doppioni (revisione 2026-11-27)
+    await chiama("commento", { id, testo, op: nuovoOp() });
   } catch (e) {
     ST.inAttesa = ST.inAttesa.filter((x) => x !== locale);
     if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id === id) {
       ST.eventi = ST.eventi.filter((x) => x !== locale);
       const c = $("#commento"); if (c && !c.value.trim()) c.value = testo;
       aggiornaLato();
+      avvisaErrore(e);
+    } else {
+      // si è già passati a un'altra fiera: il testo non si perde, si ridà in un dialogo
+      dialogo({ tipo: "errore", titolo: t("err_titolo"), testo: e.message, campo: testo, si: t("ok") });
     }
-    avvisaErrore(e);
+    return;
   }
+  // scritto: la rilettura che fallisce NON è un errore (prima toglieva il commento e lo rimetteva nel campo: doppione)
+  try {
+    const j = await chiama("leggi", { id });
+    if (ST.pagina === "richiesta" && ST.richiesta && ST.richiesta.id === id) {
+      ST.eventi = conAttesa(id, j.eventi); ST.richiesta.aggiornata = j.richiesta.aggiornata; aggiornaLato();
+    }
+  } catch (e) { _rileggi = true; }
 }
 // gli eventi arrivati dal motore + i commenti propri ancora in attesa (quelli che il motore ha già restituito escono)
 function conAttesa(id, eventi) {
@@ -1051,7 +1147,12 @@ function lega() {
   });
   window.addEventListener("dragover", (e) => e.preventDefault());   // un file lasciato fuori dalla zona non apre il browser
   window.addEventListener("drop", (e) => e.preventDefault());
-  window.addEventListener("beforeunload", (e) => { if (ST.pagina === "richiesta" && daSalvare()) { e.preventDefault(); e.returnValue = ""; } });
+  // chiudendo con un salvataggio o un caricamento in corso (anche di un'altra fiera) si chiede (revisione 2026-11-27)
+  window.addEventListener("beforeunload", (e) => {
+    if ((ST.pagina === "richiesta" && daSalvare()) || ST.invio || ST.caricamenti.some((c) => c.stato === "su" || c.stato === "coda") || (ST.attivi || 0) > 0) {
+      e.preventDefault(); e.returnValue = "";
+    }
+  });
 }
 // un campo cambiato a mano: via il segno "letto dal documento" e il rosso di campo obbligatorio vuoto
 function toccato(el) {
@@ -1127,15 +1228,22 @@ async function avvio() {
   disegnaBarra();
   if (!ST.chiave) { mostraAccesso(); return pronto(); }
   try {
-    ST.io = await chiama("io", { completo: true }); ST.dettagli = ST.io.dettagli || {}; _firma = ST.io.firma || null; inizializzaVisti();
-    if (!salvata && LINGUE[ST.io.commerciale.lingua]) { LINGUA = ST.io.commerciale.lingua; document.documentElement.lang = LINGUA; }
-    disegnaBarra();
-    disegnaElenco();
+    avviaConIo(await chiama("io", { completo: true }));
     controllaNovita();               // la prima firma: da qui in poi si rilegge solo se cambia
   } catch (e) {
+    // senza rete: l'elenco si riempie da solo appena il motore risponde (controllaNovita riprova ogni 2 s)
     if (e.codice === "accesso") mostraAccesso(); else { disegnaElenco(); avvisaErrore(e); }
   }
   pronto();
+}
+// il primo `io` arrivato (all'avvio o, se allora non c'era rete, più tardi dal controllo delle novità)
+function avviaConIo(j) {
+  ST.io = j; ST.dettagli = j.dettagli || {}; _firma = j.firma || null; inizializzaVisti();
+  let salvata = null;
+  try { salvata = localStorage.getItem(LINGUA_LS); } catch (e) { /* solo comodità */ }
+  if (!salvata && j.commerciale && LINGUE[j.commerciale.lingua]) { LINGUA = j.commerciale.lingua; document.documentElement.lang = LINGUA; }
+  disegnaBarra();
+  disegnaElenco();
 }
 function pronto() {
   const pagina = $$(".eh-pagina").find((p) => !p.classList.contains("nascosta"));

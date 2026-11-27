@@ -1,6 +1,6 @@
 // Expo Hub · service worker minimo: serve a "Installa app" di Chrome/Edge. Tiene in memoria SOLO i file della pagina
 // (mai le risposte del motore né i file caricati), così l'app si apre subito; i dati arrivano sempre dal motore.
-const VERSIONE = "expohub-26";
+const VERSIONE = "expohub-27";
 const FILE = ["./", "index.html", "config.js", "kit/colori_ares_glass.css", "kit/ares_glass.css", "kit/ares_glass.js",
   "stile.css", "tema_scuro.css", "icone.js", "lingue.js", "app.js", "icona.svg", "icona_192.png", "icona_512.png", "manifest.webmanifest"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(VERSIONE).then((c) => c.addAll(FILE))); self.skipWaiting(); });
@@ -15,8 +15,9 @@ self.addEventListener("fetch", (e) => {
   // di tenere i file 10 minuti, e l'app installata mostrava la versione vecchia; così chiede sempre al server se è
   // cambiato qualcosa (risposta minima, 304, se non è cambiato) (utente 2026-11-26)
   e.respondWith(fetch(e.request, { cache: "no-cache" }).then((r) => {
-    const copia = r.clone();
-    caches.open(VERSIONE).then((c) => c.put(e.request, copia));
+    // in memoria SOLO le risposte buone (revisione 2026-11-27: un 404, un errore o la pagina di login di un Wi-Fi
+    // pubblico finivano in memoria e si vedevano senza rete al posto della pagina)
+    if (r.ok && r.type === "basic") { const copia = r.clone(); caches.open(VERSIONE).then((c) => c.put(e.request, copia)); }
     return r;
-  }).catch(() => caches.match(e.request)));
+  }).catch(() => caches.match(e.request, { ignoreSearch: true })));
 });
