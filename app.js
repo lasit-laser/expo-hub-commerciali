@@ -352,6 +352,21 @@ function novitaDi(id, eventi, dopo = null) {
   return (eventi || []).filter((e) => daMarketing(e) && String(e.quando) > da);
 }
 function segnaVisto(id, eventi) { const v = visti() || {}; const u = ultimoEvento(eventi); if (u > (v[id] || "")) { v[id] = u; salvaVisti(v); } }
+// (utente 2026-11-27, come nel pannello del marketing) con la fiera aperta le novità si danno per LETTE dopo 3 s:
+// via la pillola "Nuovi commenti" e l'evidenza rossa nella cronologia, anche per quelle arrivate con la fiera aperta.
+// Il conto parte una volta sola per fiera: le riletture ogni 2 s non lo fanno ripartire.
+let _letta = null;
+function programmaLetta(id) {
+  if (_letta && _letta.id === id) return;
+  if (_letta) clearTimeout(_letta.t);
+  _letta = { id, t: setTimeout(() => {
+    _letta = null;
+    if (ST.pagina !== "richiesta" || !ST.richiesta || ST.richiesta.id !== id) return;
+    ST.vistoPrima = ultimoEvento(ST.eventi);
+    segnaVisto(id, ST.eventi);
+    aggiornaLato();
+  }, 3000) };
+}
 function pillolaNovita(nuovi) {
   if (!nuovi.length) return "";
   const soloCommenti = nuovi.every((e) => e.tipo === "commento");
@@ -672,6 +687,7 @@ function aggiornaLato() {
     </div>`);
   const nomeMat = (id) => { const m = d.materiali.find((x) => x.id === id); return m ? t("tipo_" + m.tipo) : ""; };
   const nuovi = nuova ? [] : novitaDi(r.id, ST.eventi, ST.vistoPrima || ""), idNuovi = new Set(nuovi.map((e) => e.id));
+  if (nuovi.length) programmaLetta(r.id);
   const eventi = ST.eventi.filter(inCronologia).slice().reverse().map((e) => {
     const marketing = e.chi === "marketing" || e.chi === "Marketing";
     const cosa = e.tipo === "creata" ? t("ev_creata") : e.tipo === "aggiornata" ? t("ev_aggiornata", { cosa: String(e.testo || "").split(", ").map((k) => t("k_" + k)).join(", ") })
@@ -707,7 +723,7 @@ async function apriRichiesta(id) {
       const pronto = ST.dettagli && ST.dettagli[id];
       const j = pronto ? JSON.parse(JSON.stringify(pronto)) : await chiama("leggi", { id });
       ST.richiesta = j.richiesta; ST.eventi = j.eventi;
-      ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate finché la fiera è aperta
+      ST.vistoPrima = (visti() || {})[id] || "";       // le novità restano segnate 3 s (programmaLetta), poi lette
       segnaVisto(id, ST.eventi);
     } else { ST.richiesta = { id: null, stato: "inviata", dati: vuota() }; ST.eventi = []; }
     ST.caricamenti = []; ST.letti = {}; ST.lettura = null;
